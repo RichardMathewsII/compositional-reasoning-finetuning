@@ -14,19 +14,18 @@ The motivation for this angle is the results from the [FLAN paper](https://arxiv
 While the FLAN paper focuses on a variety of tasks, we will focus on compositional reasoning QA.
 > "Compositional reasoning lets models go beyond rote memorization of directly observed facts to deduce previously unseen knowledge."
 
-The experimental setup I propose is:
-1. Baselines: Direct prompting, CoT with 4 examplars
-2. Benchmark: Self-ask with 4 examplars
-3. Our approaches (4 possible fine-tuning configurations, raw refers to original text, annotated refers to original text augmented with self-ask rationale)
-   1. Fine-tuned on raw questions to generate raw answers (*optional*)
-   2. Fine-tuned on self-ask annotated questions to generate raw answer (*recommended*)
-   3. Fine-tuned on raw questions to generate self-ask annotated answer (*optional*)
-   4. Fine-tuned on self-ask annotated questions to generate self-ask annotated answer (*recommended*)
+The experimental setup is:
+1. No training on 2wiki (context + question, answer)
+3. Fine-tuned on 2wiki (context + question, answer)
+4. Self-ask no training on 2wiki (context + self-ask example(s) + question, answer)
+5. Self-ask fine-tuned on 2wiki (context + self-ask example(s) + question, answer)
+We are considering training on the entire self–ask reasoning output, but only evaluating on the final answer
 
 The possible evaluation criteria are:
 1. Accuracy on compositional reasoning QA datasets (few-shot, zero-shot for fine-tuned models), *recommended*
 2. Compositionality gap (few-shot self-ask versus few-shot fine-tuned versus zero-shot fine-tuned), *optional, the original paper already shows elimination of compositionality gap, not sure if there is much to improve on here except if we can eliminate compositionality gap in even smaller models.*
 3. Zero-shot self-ask rationale generation (fine-tuned approaches only). This looks at what fraction of generated outputs actually invokes the self-ask rationale (as opposed to just answering the question). Would be interesting to see differences here between the different fine-tuning configurations, *optional*
+4. Qualitative error analysis
 
 Fine-tuning procedure:
 - **Train**: Randomly sample X examples from compositional celebrities and combine with train set from 2WikiMultiHop datasets, augmented using `DataAdaptor` class ([here](/data_adaptor.py)). Open question: how is loss computed for QA dataset, especially if model generates rationale + answer?
