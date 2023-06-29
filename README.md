@@ -3,7 +3,9 @@
 
 ---
 
-It is common to fine-tune pre-trained LLMs on a specific domain, such as medicine, law, or a company's internal documents. In this fine-tuning, the LLM absorbs facts. However, it has been shown that LLMs are quite bad at composing facts (i.e. creating logical chains of facts) to derive new facts, which is crucial step for LLMs to solve more complicated problems. If the question requires composing multiple pieces of information (i.e. multi-hop reasoning), then many systems will "hallucinate" and give nonsensical responses. Even when the model answers the sub-questions correctly, it still struggles to answer the overall question correctly, as this requires compositional reasoning. This has been dubbed the "compositionality gap," and this [paper](https://ofir.io/self-ask.pdf) shows that simply scaling model size has little effect on narrowing this compositionality gap. The authors also show we can obtain performance gains by adding examples/instructions to the prompt to break a multi-hop question into sub-questions, answer the sub-questions, and then compose the sub-answers to reach a final answer. This prompting strategy is called self-ask, and it outperforms the previous SOTA elicitive prompting, Chain of Thought Reasoning.
+It is common to fine-tune pre-trained LLMs on a specific domain, such as medicine, law, or a company's internal documents. In this fine-tuning, the LLM absorbs facts. However, it has been shown that LLMs are quite bad at composing facts (i.e. creating logical chains of facts) to derive new facts, which is crucial step for LLMs to solve more complicated problems. If the question requires composing multiple pieces of information (i.e. multi-hop reasoning), then many systems will "hallucinate" and give nonsensical responses. 
+
+Even when the model answers the sub-questions correctly, it still struggles to answer the overall question correctly, as this requires compositional reasoning. This has been dubbed the "compositionality gap," and this [paper](https://ofir.io/self-ask.pdf) shows that simply scaling model size has little effect on narrowing this compositionality gap. The authors also show we can obtain performance gains by adding examples/instructions to the prompt to break a multi-hop question into sub-questions, answer the sub-questions, and then compose the sub-answers to reach a final answer. This prompting strategy is called self-ask, and it outperforms the previous SOTA elicitive prompting, Chain of Thought Reasoning.
 
 Our goal is to improve on self-ask by fine-tuning with self-ask annotations (inserting self-ask examplars in the training prompts) and/or fine-tuning with self-ask targets (inserting a self-ask rationale as the 'target text' in each example). The original paper did not do fine-tuning, it only used self-ask prompts.
 
@@ -12,27 +14,26 @@ The motivation for this angle is the results from the [FLAN paper](https://arxiv
 While the FLAN paper focuses on a variety of tasks, we will focus on compositional reasoning QA.
 > "Compositional reasoning lets models go beyond rote memorization of directly observed facts to deduce previously unseen knowledge."
 
-The experimental setup I propose is:
-1. Baselines: Direct prompting, CoT with 4 examplars
-2. Benchmark: Self-ask with 4 examplars
-3. Our approaches (4 possible fine-tuning configurations, raw refers to original text, annotated refers to original text augmented with self-ask rationale)
-   1. Fine-tuned on raw questions to generate raw answers (*optional*)
-   2. Fine-tuned on self-ask annotated questions to generate raw answer (*recommended*)
-   3. Fine-tuned on raw questions to generate self-ask annotated answer (*optional*)
-   4. Fine-tuned on self-ask annotated questions to generate self-ask annotated answer (*recommended*)
+The experimental setup is:
+1. No training on 2wiki (context + question, answer)
+3. Fine-tuned on 2wiki (context + question, answer)
+4. Self-ask no training on 2wiki (context + self-ask example(s) + question, answer)
+5. Self-ask fine-tuned on 2wiki (context + self-ask example(s) + question, answer)
+
+We are considering training on the entire self–ask reasoning output, but only evaluating on the final answer
 
 The possible evaluation criteria are:
 1. Accuracy on compositional reasoning QA datasets (few-shot, zero-shot for fine-tuned models), *recommended*
 2. Compositionality gap (few-shot self-ask versus few-shot fine-tuned versus zero-shot fine-tuned), *optional, the original paper already shows elimination of compositionality gap, not sure if there is much to improve on here except if we can eliminate compositionality gap in even smaller models.*
 3. Zero-shot self-ask rationale generation (fine-tuned approaches only). This looks at what fraction of generated outputs actually invokes the self-ask rationale (as opposed to just answering the question). Would be interesting to see differences here between the different fine-tuning configurations, *optional*
+4. Qualitative error analysis *recommended*
 
 Fine-tuning procedure:
 - **Train**: Randomly sample X examples from compositional celebrities and combine with train set from 2WikiMultiHop datasets, augmented using `DataAdaptor` class ([here](/data_adaptor.py)). Open question: how is loss computed for QA dataset, especially if model generates rationale + answer?
 - **Dev**: Randomly sample Y examples from compositional celebrities and combine with dev set from 2WikiMultiHop datasets, augmented using `DataAdaptor` class ([here](/data_adaptor.py))
 - **Test**: Add leftover examples from compositional celebrities dataset with test set from 2WikiMultiHop. Add Bamboogle dataset as test (*recommended*) and Musique as test (*optional*).
 
-Model choice (undecided):
-- Decision between T5 family and GPT-3 family
+Model choice:
 - GPT-3
   - Pros: easy comparison to Press paper, known to have been trained on wikipedia, powerful models (up to 175B parameters)
   - Cons: can only fine-tune GPT-3, not InstructGPT-3, costs money
@@ -46,8 +47,7 @@ Model choice (undecided):
 
 > "Musique, 2WikiMultiHop and CC are large, automatically generated datasets with questions that *conform to a small number of templates*. We manually constructed Bamboogle, a dataset of 125 questions, by reading random Wikipedia articles and writing a 2-hop question about them, leading to a varied dataset that challenges a system’s ability to decompose complex questions."
 
-- 2WikiMultihopQA - "We carefully design a pipeline
-and a set of templates when generating a question–answer pair that guarantees the multi-hop steps and the quality of the questions. We also exploit the structured format in Wikidata and use logical rules to create questions that are natural but still require multi-hop reasoning. Through experiments, we demonstrate that our dataset is challenging for multi-hop models and it ensures that multi-hop reasoning is required." - Ho, et al.
+- 2WikiMultihopQA - "We carefully design a pipeline and a set of templates when generating a question–answer pair that guarantees the multi-hop steps and the quality of the questions. We also exploit the structured format in Wikidata and use logical rules to create questions that are natural but still require multi-hop reasoning. Through experiments, we demonstrate that our dataset is challenging for multi-hop models and it ensures that multi-hop reasoning is required." - Ho, et al.
 ![](assets/2wikimultihopqa_stats.png)
   - [File](https://www.dropbox.com/s/npidmtadreo6df2/data.zip)
   - [Repo](https://github.com/Alab-NII/2wikimultihop)
