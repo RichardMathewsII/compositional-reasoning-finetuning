@@ -19,21 +19,21 @@ The experimental setup is:
 3. Fine-tuned on 2wiki (context + question, answer)
 4. Self-ask no training on 2wiki (context + self-ask example(s) + question, answer)
 5. Self-ask fine-tuned on 2wiki (context + self-ask example(s) + question, answer)
+
 We are considering training on the entire self–ask reasoning output, but only evaluating on the final answer
 
 The possible evaluation criteria are:
 1. Accuracy on compositional reasoning QA datasets (few-shot, zero-shot for fine-tuned models), *recommended*
 2. Compositionality gap (few-shot self-ask versus few-shot fine-tuned versus zero-shot fine-tuned), *optional, the original paper already shows elimination of compositionality gap, not sure if there is much to improve on here except if we can eliminate compositionality gap in even smaller models.*
 3. Zero-shot self-ask rationale generation (fine-tuned approaches only). This looks at what fraction of generated outputs actually invokes the self-ask rationale (as opposed to just answering the question). Would be interesting to see differences here between the different fine-tuning configurations, *optional*
-4. Qualitative error analysis
+4. Qualitative error analysis *recommended*
 
 Fine-tuning procedure:
 - **Train**: Randomly sample X examples from compositional celebrities and combine with train set from 2WikiMultiHop datasets, augmented using `DataAdaptor` class ([here](/data_adaptor.py)). Open question: how is loss computed for QA dataset, especially if model generates rationale + answer?
 - **Dev**: Randomly sample Y examples from compositional celebrities and combine with dev set from 2WikiMultiHop datasets, augmented using `DataAdaptor` class ([here](/data_adaptor.py))
 - **Test**: Add leftover examples from compositional celebrities dataset with test set from 2WikiMultiHop. Add Bamboogle dataset as test (*recommended*) and Musique as test (*optional*).
 
-Model choice (undecided):
-- Decision between T5 family and GPT-3 family
+Model choice:
 - GPT-3
   - Pros: easy comparison to Press paper, known to have been trained on wikipedia, powerful models (up to 175B parameters)
   - Cons: can only fine-tune GPT-3, not InstructGPT-3, costs money
@@ -47,8 +47,7 @@ Model choice (undecided):
 
 > "Musique, 2WikiMultiHop and CC are large, automatically generated datasets with questions that *conform to a small number of templates*. We manually constructed Bamboogle, a dataset of 125 questions, by reading random Wikipedia articles and writing a 2-hop question about them, leading to a varied dataset that challenges a system’s ability to decompose complex questions."
 
-- 2WikiMultihopQA - "We carefully design a pipeline
-and a set of templates when generating a question–answer pair that guarantees the multi-hop steps and the quality of the questions. We also exploit the structured format in Wikidata and use logical rules to create questions that are natural but still require multi-hop reasoning. Through experiments, we demonstrate that our dataset is challenging for multi-hop models and it ensures that multi-hop reasoning is required." - Ho, et al.
+- 2WikiMultihopQA - "We carefully design a pipeline and a set of templates when generating a question–answer pair that guarantees the multi-hop steps and the quality of the questions. We also exploit the structured format in Wikidata and use logical rules to create questions that are natural but still require multi-hop reasoning. Through experiments, we demonstrate that our dataset is challenging for multi-hop models and it ensures that multi-hop reasoning is required." - Ho, et al.
 ![](assets/2wikimultihopqa_stats.png)
   - [File](https://www.dropbox.com/s/npidmtadreo6df2/data.zip)
   - [Repo](https://github.com/Alab-NII/2wikimultihop)
