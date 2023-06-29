@@ -1,5 +1,14 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple, Union
+import spacy
+from transformers import T5Tokenizer
+from tqdm import tqdm
 
+
+# Load the spacy language model
+nlp = spacy.load("en_core_web_sm")
+
+# load T5 tokenizer
+tokenizer = T5Tokenizer.from_pretrained("t5-base")
 
 class DataAdaptor:
     def __init__(self, dataset: str = "2WikiMultihopQA"):
@@ -27,27 +36,54 @@ class DataAdaptor:
             raise NotImplementedError(f"Dataset {self.dataset} not implemented.")
         return examplars
 
-    def generate_training_examples(self, examples: List[Dict[str, Any]], strategy: str = "self-ask") -> List[Dict[str, str]]:
+    def generate_training_examples(
+            self, 
+            examples: List[Dict[str, Any]], 
+            strategy: str = "self-ask",
+            examplars: List[str] = []
+            ) -> List[Dict[str, str]]:
         """Generates text generation training examples from examples according to prompting strategy."""
         if isinstance(examples, dict):
+            # in case user passes single example
             examples = [examples]
+        
+        if isinstance(examplars, str):
+            # in case user passes single examplar
+            examplars = [examplars]
         
         training_examples = []
         if self.dataset == "2WikiMultihopQA":
             if strategy == "self-ask":
-                for example in examples:
+                for example in tqdm(examples, desc="Generating 2WikiMultihopQA self-ask training examples"):
                     training_examples.append(adapt_2WikiMultihopQA_to_self_ask_training_example(example))
+            elif strategy == "direct":
+                for example in tqdm(examples, desc="Generating 2WikiMultihopQA direct training examples"):
+                    training_examples.append(adapt_2WikiMultihopQA_to_direct_training_example(example))
             else:
                 raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
         elif self.dataset == "CompositionalCelebrities":
             if strategy == "self-ask":
-                for example in examples:
+                for example in tqdm(examples, desc="Generating CompositionalCelebrities self-ask training examples"):
                     training_examples.append(adapt_CompositionalCelebrities_to_self_ask_training_example(example))
             else:
                 raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
         else:
             raise NotImplementedError(f"Dataset {self.dataset} not implemented.")
-        return training_examples
+        
+        structured_training_examples = []
+        for example in tqdm(training_examples, desc=f"Structuring {self.dataset} {strategy} training examples"):
+            # remove white space at the beginning of each line
+            example["prompt"] = "\n".join([line.strip() for line in example["prompt"].split("\n")])
+            example["target"] = "\n".join([line.strip() for line in example["target"].split("\n")])
+            if len(examplars) > 0:
+                # add examplars to training examples
+                example["prompt"] = "Example Response\n" + "\nExample Response\n".join(examplars) + "\n" + example["prompt"]
+            # structure training example
+            structured_example = _structure_training_example(example["prompt"], example["target"])
+            structured_training_examples.append(structured_example)
+        
+        del training_examples
+        return structured_training_examples
 
 
 def adapt_2WikiMultihopQA_to_self_ask_examplar(example: dict) -> str:
@@ -66,9 +102,7 @@ def adapt_2WikiMultihopQA_to_self_ask_examplar(example: dict) -> str:
     question = example["question"]
     answer = example["answer"]
     evidences = example["evidences"]
-    sub_questions = []
-    for evidence in evidences:
-        sub_questions.append((f"What is the {evidence[1]} of {evidence[0]}?", evidence[2]))
+    sub_questions = _compose_2WikiMultihopQA_subquestions(evidences)
     
     # examplar
     examplar = """Question: {question}
@@ -111,12 +145,16 @@ def adapt_2WikiMultihopQA_to_self_ask_training_example(example: dict) -> str:
     question = example["question"]
     answer = example["answer"]
     evidences = example["evidences"]
-    sub_questions = []
-    for evidence in evidences:
-        sub_questions.append((f"What is the {evidence[1]} of {evidence[0]}?", evidence[2]))
+    supporting_facts = example["supporting_facts"]
+    context = dict(example["context"])
+    sub_questions = _compose_2WikiMultihopQA_subquestions(evidences)
     
     # training example with self-ask rationale output
-    prompt = """Question: {question}
+    # prompt engineering
+    facts = _compose_2WikiMultihopQA_facts(supporting_facts, context)
+    
+    # ask question with self-ask rationale hint
+    prompt = facts + """\nQuestion: {question}
     Are follow up questions needed here: 
     """.format(
         question=question
@@ -133,6 +171,40 @@ def adapt_2WikiMultihopQA_to_self_ask_training_example(example: dict) -> str:
     """.format(
         answer=answer
         )
+    # remove white space at the beginning of each line
+    prompt = "\n".join([line.strip() for line in prompt.split("\n")])
+    target = "\n".join([line.strip() for line in target.split("\n")])
+    return {"prompt": prompt, "target": target}
+
+
+def adapt_2WikiMultihopQA_to_direct_training_example(example: dict) -> str:
+    """Adapts a 2WikiMultihopQA example to a text generation training example.
+    The question is modified by adding supporting facts.
+    This is a direct prompt (just asks the question).
+
+    Parameters
+    ----------
+    example : dict
+        A 2WikiMultihopQA example.
+
+    Returns
+    -------
+    str
+        A direct text generation training example 
+        of format {'prompt': prompt, 'target': target}.
+    """
+    question = example["question"]
+    answer = example["answer"]
+    supporting_facts = example["supporting_facts"]
+    context = dict(example["context"])
+
+    # training example with supporting facts
+    facts = _compose_2WikiMultihopQA_facts(supporting_facts, context)
+    prompt = facts + """\nQuestion: {question}
+    Answer: """.format(
+        question=question
+        )
+    target = "{answer}".format(answer=answer)
     # remove white space at the beginning of each line
     prompt = "\n".join([line.strip() for line in prompt.split("\n")])
     target = "\n".join([line.strip() for line in target.split("\n")])
@@ -209,7 +281,67 @@ def adapt_CompositionalCelebrities_to_self_ask_training_example(example: dict) -
         sub_question_two_answer=sub_questions[1][1],
         answer=answer
         )
-    # remove white space at the beginning of each line
-    prompt = "\n".join([line.strip() for line in prompt.split("\n")])
-    target = "\n".join([line.strip() for line in target.split("\n")])
     return {"prompt": prompt, "target": target}
+
+
+def _structure_training_example(prompt: str, target: str) -> Dict[str, str]:
+    """Structures a text generation training example.
+    
+    Parameters
+    ----------
+    prompt : str
+        The prompt of the training example.
+    target : str
+        The target of the training example.
+    
+    Returns
+    -------
+    dict
+        A text generation training example of format 
+        {'prompt': prompt, 'target': target, 'num_prompt_tokens': num_prompt_tokens,
+        'num_target_tokens': num_target_tokens, 'num_tokens': num_tokens}.
+    """
+    prompt_tokens = tokenizer.tokenize(prompt)
+    target_tokens = tokenizer.tokenize(target)
+    return {"prompt": prompt, 
+            "target": target, 
+            "num_prompt_tokens": len(prompt_tokens), 
+            "num_target_tokens": len(target_tokens),
+            "num_tokens": len(prompt_tokens) + len(target_tokens)
+            }
+
+
+def _compose_2WikiMultihopQA_facts(supporting_facts: List[List[Union[str, int]]], context: Dict[str, List[str]]) -> str:
+    
+    # add supporting facts to prompt
+    facts = ""
+    for idx, supp_fact in enumerate(supporting_facts):
+        fact_id = supp_fact[0]
+        sent_id = supp_fact[1]
+        fact = context[fact_id][sent_id]
+        facts += f"Fact #{idx}: " + fact + "\n"
+    return facts
+
+
+def _compose_2WikiMultihopQA_subquestions(evidences) -> List[Tuple[str, str]]:
+    """Composes sub questions for 2WikiMultihopQA examples.
+    
+    Returns sub questions of format (sub_question, sub_answer).
+    """
+    sub_questions = []
+    for evidence in evidences:
+        sub_answer = evidence[2]
+
+        # check if the sub_answer is a person or a thing
+        try:
+            sub_answer_type = nlp(sub_answer).ents[0].label_
+        except IndexError:
+            sub_answer_type = "PERSON"
+        if sub_answer_type == "PERSON":
+            pronoun = "Who"
+        elif sub_answer_type == "DATE":
+            pronoun = "When"
+        else:
+            pronoun = "What"
+        sub_questions.append((f"{pronoun} is the {evidence[1]} of {evidence[0]}?", sub_answer))
+    return sub_questions
