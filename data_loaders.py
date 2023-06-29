@@ -1,9 +1,9 @@
-from typing import Dict
+from typing import Any, Dict, List
 import json
 import os
 import warnings
 
-def load_2WikiMultihopQA(n_examples: int = -1, split: str = "train") -> Dict:
+def load_2WikiMultihopQA(n_examples: int = -1, split: str = "train") -> List[Dict[str, Any]]:
     '''Loads the 2WikiMultihopQA dataset.
 
     Parameters
