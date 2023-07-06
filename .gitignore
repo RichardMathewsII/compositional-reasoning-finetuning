@@ -160,6 +160,7 @@ cython_debug/
 
 # Data
 *.json
+*.zip
 
 # MISC
 .DS_STORE
