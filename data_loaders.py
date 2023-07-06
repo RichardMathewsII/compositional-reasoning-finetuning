@@ -58,3 +58,29 @@ def load_CompositionalCelebrities(n_examples: int = -1, split: str = "train") ->
     if n_examples > 0:
         data = data[:n_examples]
     return data
+
+
+def load_FinetuningData(n_examples: int = -1, split: str = "train", strategy: str = "direct") -> Dict:
+    '''Loads the restructured version of the 2WikiMultihopQA dataset for fine-tuning.
+
+    Parameters
+    ----------
+    n_examples (optional) : filter for first n_examples, -1 means load all examples, 
+        defaults to -1
+    split (optional) : load 'train', 'dev', or 'test' split, defaults to "train"
+    strategy (optional) : specify prompting strategy, possible values are
+        - "direct": directly prompt the model with the question
+        - "self_ask": prompt and target augmented with self-ask rationale
+
+    Returns
+    -------
+    Dictionary of examples
+    '''
+    path = 'data/FinetuningData/'
+    # load json file into dictionary
+    with open(os.path.join(path, f'{strategy}_{split}.json'), 'r') as f:
+        data = json.load(f)
+    # load the first n_examples
+    if n_examples > 0:
+        data = data[:n_examples]
+    return data
