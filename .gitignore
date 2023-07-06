@@ -1,6 +1,7 @@
 # data
 *.json
 *.jsonl
+*.csv
 
 # API Key
 openai_api_key.txt
