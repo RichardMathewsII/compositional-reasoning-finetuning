@@ -14,7 +14,7 @@ def load_2WikiMultihopQA(n_examples: int = -1, split: str = "train") -> List[Dic
 
     Returns
     -------
-    Dictionary of examples, each example is a dictionary with the following keys:
+    List of examples, each example is a dictionary with the following keys:
         - _id: a unique id for each sample
         - question: a string
         - answer: an answer to the question. The test data does not have this information.
@@ -34,7 +34,7 @@ def load_2WikiMultihopQA(n_examples: int = -1, split: str = "train") -> List[Dic
     return data
 
 
-def load_CompositionalCelebrities(n_examples: int = -1, split: str = "train") -> Dict:
+def load_CompositionalCelebrities(n_examples: int = -1, split: str = "train") -> List[Dict]:
     '''Loads the compositional celebrities dataset.
 
     Parameters
@@ -45,7 +45,7 @@ def load_CompositionalCelebrities(n_examples: int = -1, split: str = "train") ->
 
     Returns
     -------
-    Dictionary of examples
+    List of examples
     '''    
     path = 'data/CompositionalCelebrities/'
     # load json file into dictionary
@@ -60,7 +60,7 @@ def load_CompositionalCelebrities(n_examples: int = -1, split: str = "train") ->
     return data
 
 
-def load_FinetuningData(n_examples: int = -1, split: str = "train", strategy: str = "direct") -> Dict:
+def load_FinetuningData(n_examples: int = -1, split: str = "train", strategy: str = "direct") -> List[Dict]:
     '''Loads the restructured version of the 2WikiMultihopQA dataset for fine-tuning.
 
     Parameters
@@ -74,7 +74,7 @@ def load_FinetuningData(n_examples: int = -1, split: str = "train", strategy: st
 
     Returns
     -------
-    Dictionary of examples
+    List of examples
     '''
     path = 'data/FinetuningData/'
     # load json file into dictionary
@@ -83,4 +83,24 @@ def load_FinetuningData(n_examples: int = -1, split: str = "train", strategy: st
     # load the first n_examples
     if n_examples > 0:
         data = data[:n_examples]
+    return data
+
+
+def load_TestData(strategy: str) -> List[Dict]:
+    '''Loads the restructured version of the 2WikiMultihopQA test dataset for evaluation.
+
+    Parameters
+    ----------
+    strategy : specify prompting strategy, possible values are
+        - "direct": directly prompt the model with the question
+        - "self_ask": prompt augmented with self-ask rationale examplars
+
+    Returns
+    -------
+    List of examples
+    '''
+    path = 'data/MultihopEvaluation/'
+    # load json file into dictionary
+    with open(os.path.join(path, f'{strategy}_test.json'), 'r') as f:
+        data = json.load(f)
     return data
