@@ -2,10 +2,12 @@ import json
 import pytest
 from evaluation import (
     extract_answer,
+    set_tokenizer,
     tokenize,
     decode,
     check_self_ask,
     check_correct,
+    load_batch,
     EvaluationConfig
     )
 from dataclasses import dataclass
@@ -102,11 +104,13 @@ def test_tokenize_decode_integration(llm_response: LLMResponse) -> None:
             dataset="",
             path=""
         )
+        # set tokenizer
+        set_tokenizer(config)
         # tokenize
         text = llm_response.generated_text
         tokenized_text = tokenize(text, config)
         # decode
-        decoded_text = decode(tokenized_text, config)
+        decoded_text = decode(tokenized_text[0], config)
         # check
         assert decoded_text == text, f"Failed for model {model_id}. Decoded text is {decoded_text}, should be {text}"
 
@@ -147,3 +151,39 @@ def test_check_correct(llm_response: LLMResponse) -> None:
         # ! test
         output = check_correct(model_answer, llm_response.true_answer)
         assert output == truth, f"Output is {output}. Should be {truth}."
+
+
+@pytest.mark.parametrize(
+    "strategy", 
+    ["direct", "self-ask"]
+)
+def test_load_batch(strategy: str) -> None:
+    '''Test load_batch'''
+    config = EvaluationConfig(
+        model='', 
+        dataset=f'toy_{strategy}', 
+        path='data/MultihopEvaluation/'
+        )
+    
+    SIZE = 8  # number of samples in toy dataset
+    batch_sizes = [1, 2, 3, 4, 5, 6, 7, 8]
+    for batch_size in batch_sizes:
+        num_processed = 0
+        for idx in range(0, SIZE, batch_size):
+            start_idx = idx
+            end_idx = min(idx + batch_size, SIZE)
+            batch = load_batch(config, (start_idx, end_idx))
+            num_processed += len(batch)
+            # check batch size
+            if idx + batch_size > SIZE:
+                assert len(batch) == SIZE - idx, f"Batch size is {len(batch)}, should be {SIZE - idx}"
+            else:
+                assert len(batch) == batch_size, f"Batch size is {len(batch)}, should be {batch_size}"
+            # check batch content
+            for sample in batch:
+                if strategy == "direct":
+                    assert "Follow up" not in sample["target"], f"Failed to load direct data"
+                elif strategy == "self-ask":
+                    assert "Follow up" in sample["target"], f"Failed to load self-ask data"
+        # check number of processed samples
+        assert num_processed == SIZE, f"Number of processed samples is {num_processed}, should be {SIZE}"
