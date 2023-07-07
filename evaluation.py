@@ -82,18 +82,23 @@ def load_batch(config: EvaluationConfig, idx_range: Tuple[int, int]) -> List[Dic
 
 def set_tokenizer(config: EvaluationConfig) -> Any:
     global tokenizer
+    global tokenizer_config
     model = config.model
     if "t5" in model:
-        # TODO: check if tokenizer is correct
-        tokenizer_obj = T5Tokenizer.from_pretrained("t5-base")
-        tokenizer = tokenizer_obj(max_length=1024, truncation=True, return_tensors="pt", padding="longest")
+        tokenizer = T5Tokenizer.from_pretrained("t5-base")
+        from tokenizers import AddedToken
+        tokenizer.add_tokens(AddedToken("\n", normalized=False))  # self-ask uses newline breaks
+        tokenizer_config = {"max_length": 1024, "truncation": True, "return_tensors": "pt", "padding": "longest"}
 
 
 def tokenize(text: str, config: EvaluationConfig) -> Any:
     '''Tokenizes a string.'''
     model = config.model
+    # make sure set_tokenizer has been executed
+    if 'tokenizer' not in globals() or 'tokenizer_config' not in globals():
+        raise Exception("tokenizer not in global scope. Please run set_tokenizer first.")
     if "t5" in model:
-        return tokenizer(text)
+        return tokenizer(text, **tokenizer_config)
     else:
         raise ValueError("Model not found.")
 
@@ -120,7 +125,7 @@ def decode(tokens, config: EvaluationConfig) -> str:
     '''Decodes a tokenized string.'''
     model = config.model
     if "t5" in model:
-        return tokenizer.decode(tokens.input_ids[0])
+        return tokenizer.decode(tokens.input_ids[0], skip_special_tokens=True)
     pass
 
 
