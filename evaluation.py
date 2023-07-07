@@ -39,6 +39,7 @@ from training_utils import qa_split
 import json
 from data_loaders import load_TestData
 from tqdm import tqdm
+from transformers import TFT5ForConditionalGeneration, T5Tokenizer
 
 
 @dataclass
@@ -56,13 +57,13 @@ def load_model(config: EvaluationConfig) -> Any:
     '''Loads a model object.'''
     model = config.model
     if model == 't5-11b-finetuned':
-        pass
+        path = "models/t5-11b-finetuned.pkl"
     elif model == 't5-3b-finetuned':
-        pass
+        path = "models/t5-3b-finetuned.pkl"
     elif model == 't5-11b':
-        pass
+        return TFT5ForConditionalGeneration.from_pretrained("t5-11b")
     elif model == 't5-3b':
-        pass
+        return TFT5ForConditionalGeneration.from_pretrained("t5-3b")
     else:
         raise ValueError("Model not found.")
     pass
@@ -71,32 +72,33 @@ def load_model(config: EvaluationConfig) -> Any:
 def load_batch(config: EvaluationConfig, idx_range: Tuple[int, int]) -> List[Dict[str, str]]:
     '''Loads a slice of the test set.'''
     dataset = config.dataset
-    if dataset == 'direct':
-        pass
-    elif dataset == 'self-ask':
-        pass
-    else:
-        raise ValueError("Dataset not found.")
-    pass
+    file = config.path+f"{dataset.replace('-', '_')}_test.json"
+    with open(file, 'r') as f:
+        data = json.load(f)
+    batch = data[idx_range[0]:idx_range[1]]
+    del data
+    return batch
+
+
+def set_tokenizer(config: EvaluationConfig) -> Any:
+    global tokenizer
+    model = config.model
+    if "t5" in model:
+        # TODO: check if tokenizer is correct
+        tokenizer_obj = T5Tokenizer.from_pretrained("t5-base")
+        tokenizer = tokenizer_obj(max_length=1024, truncation=True, return_tensors="pt", padding="longest")
 
 
 def tokenize(text: str, config: EvaluationConfig) -> Any:
     '''Tokenizes a string.'''
     model = config.model
-    if model == 't5-11b-finetuned':
-        pass
-    elif model == 't5-3b-finetuned':
-        pass
-    elif model == 't5-11b':
-        pass
-    elif model == 't5-3b':
-        pass
+    if "t5" in model:
+        return tokenizer(text)
     else:
         raise ValueError("Model not found.")
-    pass
 
 
-def ask_question(model, question) -> Any:
+def ask_question(model, question, config: EvaluationConfig) -> Any:
     '''Asks a multihop question to the model and returns the answer.
 
     Parameters
@@ -107,23 +109,18 @@ def ask_question(model, question) -> Any:
     Returns
     -------
     tokenized answer returned by model
-    '''    
+    '''
+    model = config.model
+    if "t5" in model:
+        return model.generate(**question)
     pass
 
 
 def decode(tokens, config: EvaluationConfig) -> str:
     '''Decodes a tokenized string.'''
     model = config.model
-    if model == 't5-11b-finetuned':
-        pass
-    elif model == 't5-3b-finetuned':
-        pass
-    elif model == 't5-11b':
-        pass
-    elif model == 't5-3b':
-        pass
-    else:
-        raise ValueError("Model not found.")
+    if "t5" in model:
+        return tokenizer.decode(tokens.input_ids[0])
     pass
 
 
@@ -212,7 +209,7 @@ if __name__ == "__main__":
         question_encodings = [tokenize(question, config) for question in questions]
         responses = []
         for q in question_encodings:
-            tokenized_response = ask_question(model, q)
+            tokenized_response = ask_question(model, q, config)
             response = decode(tokenized_response, config)
             answer = extract_answer(response)
             self_ask = check_self_ask(response)
