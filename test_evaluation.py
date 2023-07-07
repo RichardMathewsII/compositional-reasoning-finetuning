@@ -2,7 +2,6 @@ import json
 import pytest
 from evaluation import (
     extract_answer,
-    set_tokenizer,
     tokenize,
     decode,
     check_self_ask,
@@ -105,13 +104,11 @@ def test_tokenize_decode_integration(llm_response: LLMResponse) -> None:
             dataset="",
             path=""
         )
-        # set tokenizer
-        set_tokenizer(config)
         # tokenize
         text = llm_response.generated_text
         tokenized_text = tokenize(text, config)
         # decode
-        decoded_text = decode(tokenized_text, config)
+        decoded_text = decode(tokenized_text.input_ids, config)[0]
         # check
         s = SequenceMatcher(None, text, decoded_text)  # use similarity, strings are not exact match
         score = s.ratio()

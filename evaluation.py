@@ -34,7 +34,7 @@ Stage 2: Assess responses
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Iterable
 from training_utils import qa_split
 import json
 from data_loaders import load_TestData
@@ -50,7 +50,15 @@ class EvaluationConfig(object):
     path: str
     
     def __post_init__(self):
-        pass
+        if "t5" in self.model:
+            self._set_t5_tokenizer()
+    
+    def _set_t5_tokenizer(self):
+        tokenizer = T5Tokenizer.from_pretrained("t5-base")
+        from tokenizers import AddedToken
+        tokenizer.add_tokens(AddedToken("\n", normalized=False))  # self-ask uses newline breaks
+        self.tokenizer_ = tokenizer
+        self.tokenizer_config_ = {"max_length": 1024, "truncation": True, "return_tensors": "pt", "padding": "longest"}
 
 
 def load_model(config: EvaluationConfig) -> Any:
@@ -80,52 +88,42 @@ def load_batch(config: EvaluationConfig, idx_range: Tuple[int, int]) -> List[Dic
     return batch
 
 
-def set_tokenizer(config: EvaluationConfig) -> Any:
-    global tokenizer
-    global tokenizer_config
+def tokenize(text: Iterable[str], config: EvaluationConfig) -> Any:
+    '''Tokenizes one or more strings.'''
     model = config.model
-    if "t5" in model:
-        tokenizer = T5Tokenizer.from_pretrained("t5-base")
-        from tokenizers import AddedToken
-        tokenizer.add_tokens(AddedToken("\n", normalized=False))  # self-ask uses newline breaks
-        tokenizer_config = {"max_length": 1024, "truncation": True, "return_tensors": "pt", "padding": "longest"}
-
-
-def tokenize(text: str, config: EvaluationConfig) -> Any:
-    '''Tokenizes a string.'''
-    model = config.model
+    tokenizer = config.tokenizer_
+    tokenizer_config = config.tokenizer_config_
     # make sure set_tokenizer has been executed
-    if 'tokenizer' not in globals() or 'tokenizer_config' not in globals():
-        raise Exception("tokenizer not in global scope. Please run set_tokenizer first.")
     if "t5" in model:
         return tokenizer(text, **tokenizer_config)
     else:
         raise ValueError("Model not found.")
 
 
-def ask_question(model, question, config: EvaluationConfig) -> Any:
-    '''Asks a multihop question to the model and returns the answer.
+def ask_questions(lm, questions, config: EvaluationConfig) -> Any:
+    '''Asks one or more multihop questions to the model and returns the answer.
 
     Parameters
     ----------
-    model : a model object
-    question : tokenized prompt including the question
+    lm : a language model object
+    questions : tokenized prompts including the questions
+    config : the evaluation workflow configuration
 
     Returns
     -------
     tokenized answer returned by model
     '''
-    model = config.model
-    if "t5" in model:
-        return model.generate(**question)
+    if "t5" in config.model:
+        return lm.generate(questions.input_ids)
     pass
 
 
-def decode(tokens, config: EvaluationConfig) -> str:
-    '''Decodes a tokenized string.'''
+def decode(tokens: Iterable, config: EvaluationConfig) -> Iterable[str]:
+    '''Decodes one or more tokenized strings.'''
     model = config.model
+    tokenizer = config.tokenizer_
     if "t5" in model:
-        return tokenizer.decode(tokens.input_ids[0], skip_special_tokens=True)
+        return tokenizer.batch_decode(tokens, skip_special_tokens=True)
     pass
 
 
@@ -211,17 +209,17 @@ if __name__ == "__main__":
         end_idx = min(idx + BATCH_SIZE, SIZE)
         batch = load_batch(config, (start_idx, end_idx))
         questions, answers = qa_split(batch)
-        question_encodings = [tokenize(question, config) for question in questions]
+        question_encodings = tokenize(questions, config)
         responses = []
-        for q in question_encodings:
-            tokenized_response = ask_question(model, q, config)
-            response = decode(tokenized_response, config)
+        tokenized_responses = ask_questions(model, question_encodings, config)
+        text_responses = decode(tokenized_responses, config)
+        for response in text_responses:
             answer = extract_answer(response)
             self_ask = check_self_ask(response)
             responses.append({'response': response, 'answer': answer, 'self_ask': self_ask})
         
         store_responses(responses, config)
-        del batch, questions, answers, question_encodings, responses
+        del batch, questions, answers, question_encodings, responses, text_responses, tokenized_responses
     
     # Stage 2: Assess responses
     responses = load_responses(config)
