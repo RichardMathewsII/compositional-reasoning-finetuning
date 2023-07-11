@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Tuple, Union
 import spacy
-from transformers import T5Tokenizer
+# from transformers import T5Tokenizer
 from tqdm import tqdm
 
 
@@ -8,7 +8,7 @@ from tqdm import tqdm
 nlp = spacy.load("en_core_web_sm")
 
 # load T5 tokenizer
-tokenizer = T5Tokenizer.from_pretrained("t5-base")
+# tokenizer = T5Tokenizer.from_pretrained("t5-base")
 
 class DataAdaptor:
     def __init__(self, dataset: str = "2WikiMultihopQA"):
@@ -84,6 +84,26 @@ class DataAdaptor:
         
         del training_examples
         return structured_training_examples
+
+    def generate_evaluation_examples(self, examples: List[Dict[str, Any]], examplars: List[str] = []) -> List[Dict[str, str]]:
+        if self.dataset == "2WikiMultihopQA":
+            self_ask_examples = self.generate_training_examples(examples, strategy="self-ask", examplars=examplars)
+            direct_examples = self.generate_training_examples(examples, strategy="direct")
+            evaluation_examples = []
+            for self_ask_example, direct_example in zip(self_ask_examples, direct_examples):
+                self_ask_prompt = self_ask_example["prompt"]
+                self_ask_target = self_ask_example["target"]
+                direct_prompt = direct_example["prompt"]
+                direct_target = direct_example["target"]
+                evaluation_examples.append({
+                    "self_ask_prompt_with_examplars": self_ask_prompt,
+                    "self_ask_answer": self_ask_target,
+                    "direct_prompt": direct_prompt,
+                    "answer": direct_target
+                    })
+            del self_ask_examples
+            del direct_examples
+            return evaluation_examples
 
 
 def adapt_2WikiMultihopQA_to_self_ask_examplar(example: dict) -> str:
@@ -301,13 +321,13 @@ def _structure_training_example(prompt: str, target: str) -> Dict[str, str]:
         {'prompt': prompt, 'target': target, 'num_prompt_tokens': num_prompt_tokens,
         'num_target_tokens': num_target_tokens, 'num_tokens': num_tokens}.
     """
-    prompt_tokens = tokenizer.tokenize(prompt)
-    target_tokens = tokenizer.tokenize(target)
+    # prompt_tokens = tokenizer.tokenize(prompt)
+    # target_tokens = tokenizer.tokenize(target)
     return {"prompt": prompt, 
             "target": target, 
-            "num_prompt_tokens": len(prompt_tokens), 
-            "num_target_tokens": len(target_tokens),
-            "num_tokens": len(prompt_tokens) + len(target_tokens)
+            # "num_prompt_tokens": len(prompt_tokens), 
+            # "num_target_tokens": len(target_tokens),
+            # "num_tokens": len(prompt_tokens) + len(target_tokens)
             }
 
 
