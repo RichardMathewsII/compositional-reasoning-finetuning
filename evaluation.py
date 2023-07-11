@@ -42,7 +42,7 @@ from data_loaders import load_TestData
 from tqdm import tqdm
 from thefuzz import fuzz
 import argparse
-# from transformers import TFT5ForConditionalGeneration, T5Tokenizer
+from transformers import TFT5ForConditionalGeneration, T5Tokenizer
 
 
 @dataclass
@@ -77,6 +77,8 @@ def load_model(config: EvaluationConfig) -> Any:
         return TFT5ForConditionalGeneration.from_pretrained("t5-11b")
     elif model == 't5-3b':
         return TFT5ForConditionalGeneration.from_pretrained("t5-3b")
+    elif model == "t5-small":
+        return TFT5ForConditionalGeneration.from_pretrained("t5-small")
     else:
         raise ValueError("Model not found.")
     pass
@@ -91,6 +93,14 @@ def load_batch(config: EvaluationConfig, idx_range: Tuple[int, int]) -> List[Dic
     batch = data[idx_range[0]:idx_range[1]]
     del data
     return batch
+
+
+def preprocess_questions(questions: List[str], config: EvaluationConfig) -> List[str]:
+    model = config.model
+    dataset = config.dataset
+    if "t5" in model and "direct" in dataset:
+        questions = [q+" The answer is:" for q in questions]
+    return questions
 
 
 def tokenize(text: Iterable[str], config: EvaluationConfig) -> Any:
@@ -175,13 +185,20 @@ def check_self_ask(generated_text: str) -> bool:
         return False
 
 
-def store_responses(response: List[Dict[str, Any]], config: EvaluationConfig) -> None:
+def store_responses(responses: List[Dict[str, Any]], config: EvaluationConfig) -> None:
     '''Stores responses in a json file.'''
     storage_path = config.path
     file = f"{storage_path}{config.model}-{config.dataset}.json"
-    # append to file
-    with open(file, 'a') as f:
-        json.dump(response, f)
+    try:
+        # file exists
+        with open(file,'r') as f:
+            existing = json.load(f)
+            responses = existing + responses
+    except:
+        pass
+    # create file
+    with open(file, 'w') as f:
+        json.dump(responses, f)
 
 
 def load_responses(config: EvaluationConfig) -> List[Dict[str, Any]]:
@@ -230,10 +247,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.model not in model_options:
-        raise ValueError(f"Model must be one of {model_options}")
-    if args.dataset not in dataset_options:
-        raise ValueError(f"Dataset must be one of {dataset_options}")
+    # TODO: uncomment for real evaluation
+    # if args.model not in model_options:
+    #     raise ValueError(f"Model must be one of {model_options}")
+    # if args.dataset not in dataset_options:
+    #     raise ValueError(f"Dataset must be one of {dataset_options}")
 
     MODEL = "t5-3b" if args.model is None else args.model
     DATASET = "direct" if args.dataset is None else args.dataset
@@ -250,6 +268,7 @@ if __name__ == "__main__":
         end_idx = min(idx + BATCH_SIZE, SIZE)
         batch = load_batch(config, (start_idx, end_idx))
         questions, answers = qa_split(batch)
+        questions = preprocess_questions(questions, config)
         question_encodings = tokenize(questions, config)
         responses = []
         tokenized_responses = ask_questions(model, question_encodings, config)
@@ -261,13 +280,15 @@ if __name__ == "__main__":
         
         store_responses(responses, config)
         del batch, questions, answers, question_encodings, responses, text_responses, tokenized_responses
-    
+    del model
+
+
     # Stage 2: Assess responses
     responses = load_responses(config)
     test_set = load_TestData(config.dataset)
     correct = []
     for idx, (test_example, response) in tqdm(enumerate(zip(test_set, responses))):
-        true_answer = test_example['answer']
+        true_answer = test_example['target']
         generated_answer = response['answer']
         correct.append(check_correct(generated_answer, true_answer))
     
