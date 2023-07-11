@@ -1,0 +1,17 @@
+Some weights of BartForQuestionAnswering were not initialized from the model checkpoint at facebook/bart-base and are newly initialized: ['qa_outputs.bias', 'qa_outputs.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+--- Logging error ---
+Traceback (most recent call last):
+  File "/Users/adamweinberger/opt/anaconda3/envs/compositional_reasoning_finetuning/lib/python3.11/logging/__init__.py", line 1114, in emit
+    self.flush()
+  File "/Users/adamweinberger/opt/anaconda3/envs/compositional_reasoning_finetuning/lib/python3.11/logging/__init__.py", line 1094, in flush
+    self.stream.flush()
+OSError: [Errno 5] Input/output error
+Call stack:
+  File "/Users/adamweinberger/opt/anaconda3/envs/compositional_reasoning_finetuning/lib/python3.11/threading.py", line 995, in _bootstrap
+    self._bootstrap_inner()
+  File "/Users/adamweinberger/opt/anaconda3/envs/compositional_reasoning_finetuning/lib/python3.11/threading.py", line 1038, in _bootstrap_inner
+    self.run()
+  File "/Users/adamweinberger/opt/anaconda3/envs/compositional_reasoning_finetuning/lib/python3.11/site-packages/ipykernel/parentpoller.py", line 38, in run
+    get_logger().warning("Parent appears to have exited, shutting down.")
+Message: 'Parent appears to have exited, shutting down.'
