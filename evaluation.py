@@ -28,9 +28,24 @@ Stage 2: Assess responses
 2. Iterate through (question, true_answer, model_answer) triples
 3. Determine if model_answer matches true_answer
 4. Record 0 for wrong answer, 1 for correct answer in list
-5. Compute accuracy as sum of list divided by length of list
-6. Save results in json file '{model}-{dataset}-results.json' with format
-{'model': '...', 'dataset': '...', 'accuracy': 0.##, 'test_results': [0, 1, 1, ...]}
+5. Record precision, recall, F1 score for model response
+6. Compute accuracy as sum of list divided by length of list
+7. Compute overall precision, recall, F1 score via averaging
+8. Save results in json file '{model}-{dataset}-results.json' with format
+{'model': '...', 'dataset': '...',
+'micro_results': {
+    'correct': [0, 1, 1, ...],
+    'precision': [0.##, 0.##, 0.##, ...],
+    'recall': [0.##, 0.##, 0.##, ...], 
+    'F1': [0.##, 0.##, 0.##, ...]
+    },
+'macro_results': {
+    'accuracy': 0.##, 
+    'F1': 0.##, 
+    'precision': 0.##, 
+    'recall': 0.##
+    }
+}
 """
 
 from dataclasses import dataclass
@@ -42,8 +57,8 @@ from data_loaders import load_TestData
 from tqdm import tqdm
 from thefuzz import fuzz
 import argparse
+from nltk.metrics.score import precision, recall
 from transformers import TFT5ForConditionalGeneration, T5Tokenizer
-
 
 @dataclass
 class EvaluationConfig(object):
@@ -211,18 +226,82 @@ def load_responses(config: EvaluationConfig) -> List[Dict[str, Any]]:
 
 
 def check_correct(generated_answer: str, true_answer: str) -> int:
-    '''Checks if generated answer matches true answer.
+    '''Checks if generated answer contains true answer.
     
     Returns
     -------
     0 if wrong, 1 if correct
     '''
     # use similarity, strings may not be exact match
-    score = fuzz.partial_ratio(generated_answer.strip().lower(), true_answer.strip().lower())  
-    if score > 95:
-        return 1
-    else:
-        return 0
+    # score = fuzz.partial_ratio(generated_answer.strip().lower(), true_answer.strip().lower())
+    # if score > 95:
+    #     return 1
+    # else:
+    #     return 0
+    # recall based
+    return true_answer.strip().lower() in generated_answer.strip().lower()
+
+
+def compute_micro_results(test_examples, responses) -> Dict[str, Any]:
+    '''Computes micro results for each question in the test set.
+    
+    Returns a dictionary with the following keys:
+    {
+        'correct': [0, 1, 1, ...], 
+        'precision': [0.##, 0.##, 0.##, ...],
+        'recall': [0.##, 0.##, 0.##, ...], 
+        'F1': [0.##, 0.##, 0.##, ...]
+    }
+    '''
+    correct_metrics = []
+    precision_metrics = []
+    recall_metrics = []
+    f1_metrics = []
+    for idx, (test_example, response) in tqdm(enumerate(zip(test_examples, responses))):
+        true_answer = test_example['answer']
+        reference_text = test_example['target']
+
+        generated_answer = response['answer']
+        generated_response = response['response']
+
+        precision_metrics.append(precision(reference_text, generated_response))
+        recall_metrics.append(recall(reference_text, generated_response))
+        f1_metrics.append(2 * (precision_metrics[idx] * recall_metrics[idx]) / (precision_metrics[idx] + recall_metrics[idx]))
+        correct_metrics.append(check_correct(generated_answer, true_answer))
+    
+    return {
+        'correct': correct_metrics, 
+        'precision': precision_metrics,
+        'recall': recall_metrics, 
+        'F1': f1_metrics
+    }
+
+
+def compute_macro_results(micro_results: Dict[str, Any]) -> Dict[str, Any]:
+    '''Computes macro results for the test set.
+    
+    Returns a dictionary with the following keys:
+    {
+        'accuracy': 0.##, 
+        'F1': 0.##, 
+        'precision': 0.##, 
+        'recall': 0.##
+    }
+    '''
+    correct_metrics = micro_results['correct']
+    precision_metrics = micro_results['precision']
+    recall_metrics = micro_results['recall']
+    f1_metrics = micro_results['F1']
+    accuracy = round(sum(correct_metrics) / len(correct_metrics), 4)
+    precision = round(sum(precision_metrics) / len(precision_metrics), 4)
+    recall = round(sum(recall_metrics) / len(recall_metrics), 4)
+    f1 = round(sum(f1_metrics) / len(f1_metrics), 4)
+    return {
+        'accuracy': accuracy, 
+        'F1': f1, 
+        'precision': precision, 
+        'recall': recall
+    }
 
 
 def store_evaluation_results(results: Dict, config: EvaluationConfig) -> None:
@@ -285,13 +364,11 @@ if __name__ == "__main__":
 
     # Stage 2: Assess responses
     responses = load_responses(config)
-    test_set = load_TestData(config.dataset)
-    correct = []
-    for idx, (test_example, response) in tqdm(enumerate(zip(test_set, responses))):
-        true_answer = test_example['target']
-        generated_answer = response['answer']
-        correct.append(check_correct(generated_answer, true_answer))
+    test_set = load_TestData(strategy=config.dataset)
+
+    micro_results = compute_micro_results(test_set, responses)
+
+    macro_results = compute_macro_results(micro_results)
     
-    accuracy = round(sum(correct) / len(correct), 4)
-    results = {'model': config.model, 'dataset': config.dataset, 'accuracy': accuracy, 'test_results': correct}
+    results = {'model': config.model, 'dataset': config.dataset, 'micro_results': micro_results, 'macro_results': macro_results}
     store_evaluation_results(results, config)

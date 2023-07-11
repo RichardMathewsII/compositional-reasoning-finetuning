@@ -1,7 +1,0 @@
-2023-06-29 16:30:31.912 | INFO     | __main__:generate_finetuning_data:37 - Initiating: data generation
-2023-06-29 16:30:31.913 | INFO     | __main__:generate_finetuning_data:38 - Initiating: train-dev split
-2023-06-29 16:30:40.458 | INFO     | __main__:generate_finetuning_data:40 - Completed: train-dev split
-2023-06-29 16:30:40.458 | INFO     | __main__:generate_finetuning_data:62 - Initiating: generating self-ask prompt training examples
-2023-06-29 16:54:42.434 | INFO     | __main__:generate_finetuning_data:73 - Completed: generating self-ask prompt training examples
-2023-06-29 16:54:42.434 | INFO     | __main__:generate_finetuning_data:75 - Initiating: exporting self-ask prompt training examples to json
-2023-06-29 16:54:44.452 | INFO     | __main__:generate_finetuning_data:80 - Completed: exporting self-ask prompt training examples to json
