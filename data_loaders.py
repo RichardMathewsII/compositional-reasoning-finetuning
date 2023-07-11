@@ -97,10 +97,11 @@ def load_TestData(strategy: str) -> List[Dict]:
 
     Returns
     -------
-    List of examples
+    List of examples of format:
+    {"self_ask_prompt_with_examplars": ..., "self_ask_answer": ..., "direct_prompt": ..., "answer": ...}
     '''
     path = 'data/MultihopEvaluation/'
     # load json file into dictionary
-    with open(os.path.join(path, f'{strategy}_test.json'), 'r') as f:
+    with open(os.path.join(path, f'{strategy.replace("-", "_")}_test.json'), 'r') as f:
         data = json.load(f)
     return data
