@@ -75,6 +75,7 @@ class MultihopQADataGenerator(tf.keras.utils.Sequence):
         # after the chunk we'll use for this batch
         batch_idx_skip = self.row_order[:batch_start] + self.row_order[batch_end:]
         df = pd.read_json(self.data_filename)
+        df = df.iloc[batch_start : batch_end]
 
         text_pairs = df[['prompt', 'target']].values.astype(str).tolist()
 
