@@ -130,12 +130,14 @@ def generate_finetuning_data(
 
 
 if __name__ == "__main__":
-    # generate_finetuning_data(
-    #     direct=False, 
-    #     self_ask=True, 
-    #     self_ask_examplars=2,
-    #     sample_size=-1,
-    #     dev_size=12576
-    #     )
+    generate_finetuning_data(
+        direct=True, 
+        self_ask=False, 
+        self_ask_examplars=2,
+        # sample_size=-1,
+        # dev_size=12576
+        sample_size=5,
+        dev_size=2
+        )
 
-    generate_test_data(sample_size=-1)
+    # generate_test_data(sample_size=-1)

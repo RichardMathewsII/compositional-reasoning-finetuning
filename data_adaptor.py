@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Tuple, Union
 import spacy
-# from transformers import T5Tokenizer
+from transformers import T5Tokenizer
 from tqdm import tqdm
 
 
@@ -8,7 +8,7 @@ from tqdm import tqdm
 nlp = spacy.load("en_core_web_sm")
 
 # load T5 tokenizer
-# tokenizer = T5Tokenizer.from_pretrained("t5-base")
+tokenizer = T5Tokenizer.from_pretrained("t5-base")
 
 class DataAdaptor:
     def __init__(self, dataset: str = "2WikiMultihopQA"):
@@ -77,7 +77,7 @@ class DataAdaptor:
             example["target"] = "\n".join([line.strip() for line in example["target"].split("\n")])
             if len(examplars) > 0:
                 # add examplars to training examples
-                example["prompt"] = "Example Response\n" + "\nExample Response\n".join(examplars) + "\n" + example["prompt"]
+                example["prompt"] = "Examples:\nSTART" + "\nEND\n\nSTART\n".join(examplars) + "END\n" + example["prompt"]
             # structure training example
             structured_example = _structure_training_example(example["prompt"], example["target"])
             structured_training_examples.append(structured_example)
@@ -321,20 +321,20 @@ def _structure_training_example(prompt: str, target: str) -> Dict[str, str]:
         {'prompt': prompt, 'target': target, 'num_prompt_tokens': num_prompt_tokens,
         'num_target_tokens': num_target_tokens, 'num_tokens': num_tokens}.
     """
-    # prompt_tokens = tokenizer.tokenize(prompt)
-    # target_tokens = tokenizer.tokenize(target)
+    prompt_tokens = tokenizer.tokenize(prompt)
+    target_tokens = tokenizer.tokenize(target)
     return {"prompt": prompt, 
             "target": target, 
-            # "num_prompt_tokens": len(prompt_tokens), 
-            # "num_target_tokens": len(target_tokens),
-            # "num_tokens": len(prompt_tokens) + len(target_tokens)
+            "num_prompt_tokens": len(prompt_tokens), 
+            "num_target_tokens": len(target_tokens),
+            "num_tokens": len(prompt_tokens) + len(target_tokens)
             }
 
 
 def _compose_2WikiMultihopQA_facts(supporting_facts: List[List[Union[str, int]]], context: Dict[str, List[str]]) -> str:
     
     # add supporting facts to prompt
-    facts = ""
+    facts = "Facts:\n"
     for idx, supp_fact in enumerate(supporting_facts):
         fact_id = supp_fact[0]
         sent_id = supp_fact[1]
