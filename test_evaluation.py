@@ -109,7 +109,7 @@ def test_extract_answer(llm_response: LLMResponse) -> None:
     assert score > 0.9, f"Answer is {answer}, should be {llm_response.model_answer}"
 
 
-@pytest.mark.skip(reason="won't run on mac")
+# @pytest.mark.skip(reason="won't run on mac")
 def test_tokenize_decode_integration(llm_response: LLMResponse) -> None:
     '''Test tokenize and decode integration'''
     model_options = ['t5-11b-finetuned', 't5-3b-finetuned', 't5-11b', 't5-3b']
