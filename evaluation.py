@@ -57,8 +57,9 @@ from data_loaders import load_TestData
 from tqdm import tqdm
 from thefuzz import fuzz
 import argparse
-from nltk.metrics.score import precision, recall
+from nltk.metrics.scores import precision, recall
 from transformers import TFT5ForConditionalGeneration, T5Tokenizer
+from loguru import logger
 
 @dataclass
 class EvaluationConfig(object):
@@ -200,6 +201,13 @@ def check_self_ask(generated_text: str) -> bool:
         return False
 
 
+def clear_responses_file(config: EvaluationConfig):
+    storage_path = config.path
+    file = f"{storage_path}{config.model}-{config.dataset}.json"
+    with open(file, 'w') as f:
+        pass
+
+
 def store_responses(responses: List[Dict[str, Any]], config: EvaluationConfig) -> None:
     '''Stores responses in a json file.'''
     storage_path = config.path
@@ -264,9 +272,12 @@ def compute_micro_results(test_examples, responses) -> Dict[str, Any]:
         generated_answer = response['answer']
         generated_response = response['response']
 
-        precision_metrics.append(precision(reference_text, generated_response))
-        recall_metrics.append(recall(reference_text, generated_response))
-        f1_metrics.append(2 * (precision_metrics[idx] * recall_metrics[idx]) / (precision_metrics[idx] + recall_metrics[idx]))
+        precision_metrics.append(precision(set(reference_text.split(" ")), set(generated_response.split(" "))))
+        recall_metrics.append(recall(set(reference_text.split(" ")), set(generated_response.split(" "))))
+        try:
+            f1_metrics.append(2 * (precision_metrics[idx] * recall_metrics[idx]) / (precision_metrics[idx] + recall_metrics[idx]))
+        except:
+            f1_metrics.append(0)
         correct_metrics.append(check_correct(generated_answer, true_answer))
     
     return {
@@ -313,6 +324,13 @@ def store_evaluation_results(results: Dict, config: EvaluationConfig) -> None:
 
 
 if __name__ == "__main__":
+    # clear contents of log file
+    with open("logs/evaluation.log", "w") as f:
+        pass
+
+    # set log file
+    logger.add("logs/evaluation.log", rotation="500 MB", compression="zip")
+
     model_options = ['t5-11b-finetuned', 't5-3b-finetuned', 't5-11b', 't5-3b']
     dataset_options = ['direct', 'self-ask']
     path = "data/MultihopEvaluation/"
@@ -326,11 +344,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # TODO: uncomment for real evaluation
-    # if args.model not in model_options:
-    #     raise ValueError(f"Model must be one of {model_options}")
-    # if args.dataset not in dataset_options:
-    #     raise ValueError(f"Dataset must be one of {dataset_options}")
+    if args.model not in model_options:
+        raise ValueError(f"Model must be one of {model_options}")
+    if args.dataset not in dataset_options:
+        raise ValueError(f"Dataset must be one of {dataset_options}")
 
     MODEL = "t5-3b" if args.model is None else args.model
     DATASET = "direct" if args.dataset is None else args.dataset
@@ -338,10 +355,13 @@ if __name__ == "__main__":
     BATCH_SIZE = 100 if args.batch_size is None else args.batch_size
 
     config = EvaluationConfig(MODEL, DATASET, path)
+    clear_responses_file(config)
 
     # Stage 1: Collect responses
+    logger.info("Loading {model} model", model=MODEL)
     model = load_model(config)
     
+    logger.info("Collecting model responses...")
     for idx in tqdm(range(0, SIZE, BATCH_SIZE)):
         start_idx = idx
         end_idx = min(idx + BATCH_SIZE, SIZE)
@@ -360,15 +380,21 @@ if __name__ == "__main__":
         store_responses(responses, config)
         del batch, questions, answers, question_encodings, responses, text_responses, tokenized_responses
     del model
-
+    logger.info("done")
 
     # Stage 2: Assess responses
     responses = load_responses(config)
-    test_set = load_TestData(strategy=config.dataset)
+    assert len(responses) == SIZE, \
+    "size mismatch between stored responses and SIZE, delete responses file and rerun"
+    test_set = load_TestData(strategy=config.dataset, n_examples=SIZE)
+    assert len(responses) == len(test_set), \
+    f"size mismatch between responses and test_set: responses is size {len(responses)}; test_set is size {len(test_set)}"
 
+    logger.info("Computing results...")
     micro_results = compute_micro_results(test_set, responses)
 
     macro_results = compute_macro_results(micro_results)
+    logger.info("done")
     
     results = {'model': config.model, 'dataset': config.dataset, 'micro_results': micro_results, 'macro_results': macro_results}
     store_evaluation_results(results, config)
