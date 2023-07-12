@@ -77,7 +77,7 @@ class DataAdaptor:
             example["target"] = "\n".join([line.strip() for line in example["target"].split("\n")])
             if len(examplars) > 0:
                 # add examplars to training examples
-                example["prompt"] = "Examples:\nSTART" + "\nEND\n\nSTART\n".join(examplars) + "END\n" + example["prompt"]
+                example["prompt"] = "Examples:\nSTART\n" + "END\n\nSTART\n".join(examplars) + "END\n\n" + example["prompt"]
             # structure training example
             structured_example = _structure_training_example(example["prompt"], example["target"])
             structured_training_examples.append(structured_example)

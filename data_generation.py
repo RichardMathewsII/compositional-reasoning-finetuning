@@ -86,6 +86,7 @@ def generate_finetuning_data(
     logger.info("Completed: train-dev split")
 
     wiki_adaptor = DataAdaptor("2WikiMultihopQA")
+    path = "data/FinetuningData/"
     
     if direct:
         logger.info("Initiating: generating direct prompt training examples")
@@ -95,9 +96,9 @@ def generate_finetuning_data(
         logger.info("Completed: generating direct prompt training examples")
         # dump direct fine-tuning data to json
         logger.info("Initiating: exporting direct prompt training examples to json")
-        with open("data/2WikiMultihopQA/direct_train.json", "w") as f:
+        with open(path+"direct_train.json", "w") as f:
             json.dump(direct_train_set, f)
-        with open("data/2WikiMultihopQA/direct_dev.json", "w") as f:
+        with open(path+"direct_dev.json", "w") as f:
             json.dump(direct_dev_set, f)
         logger.info("Completed: exporting direct prompt training examples to json")
         # clear data files
@@ -110,7 +111,7 @@ def generate_finetuning_data(
         # generate self-ask examplars
         examplars = wiki_adaptor.generate_examplars(train_set[:self_ask_examplars], "self-ask")
         # write examplars to text file
-        with open("data/2WikiMultihopQA/self_ask_examplars.txt", "w") as f:
+        with open(path+"self_ask_examplars.txt", "w") as f:
             for examplar in examplars:
                 f.write(examplar + "\n")
 
@@ -119,9 +120,9 @@ def generate_finetuning_data(
         logger.info("Completed: generating self-ask prompt training examples")
         # dump self-ask fine-tuning data to json
         logger.info("Initiating: exporting self-ask prompt training examples to json")
-        with open("data/2WikiMultihopQA/self_ask_train.json", "w") as f:
+        with open(path+"self_ask_train.json", "w") as f:
             json.dump(self_ask_train_set, f)
-        with open("data/2WikiMultihopQA/self_ask_dev.json", "w") as f:
+        with open(path+"self_ask_dev.json", "w") as f:
             json.dump(self_ask_dev_set, f)
         logger.info("Completed: exporting self-ask prompt training examples to json")
         # clear data files
@@ -131,13 +132,11 @@ def generate_finetuning_data(
 
 if __name__ == "__main__":
     generate_finetuning_data(
-        direct=True, 
-        self_ask=False, 
+        direct=False, 
+        self_ask=True, 
         self_ask_examplars=2,
-        # sample_size=-1,
-        # dev_size=12576
-        sample_size=5,
-        dev_size=2
+        sample_size=-1,
+        dev_size=12576
         )
 
     # generate_test_data(sample_size=-1)

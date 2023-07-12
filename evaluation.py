@@ -344,10 +344,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.model not in model_options:
-        raise ValueError(f"Model must be one of {model_options}")
-    if args.dataset not in dataset_options:
-        raise ValueError(f"Dataset must be one of {dataset_options}")
+    # TODO: uncomment during production
+    # if args.model not in model_options:
+    #     raise ValueError(f"Model must be one of {model_options}")
+    # if args.dataset not in dataset_options:
+    #     raise ValueError(f"Dataset must be one of {dataset_options}")
 
     MODEL = "t5-3b" if args.model is None else args.model
     DATASET = "direct" if args.dataset is None else args.dataset
