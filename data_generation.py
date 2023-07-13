@@ -49,6 +49,7 @@ def generate_test_data(sample_size: int = -1) -> None:
 
     self_ask_examples = []
     direct_examples = []
+    squad_examples = []
     for example in test_examples:
         self_ask_examples.append({
             "prompt": example["self_ask_prompt_with_examplars"],
@@ -60,14 +61,22 @@ def generate_test_data(sample_size: int = -1) -> None:
             "target": example["answer"],
             "answer": example["answer"]
         })
+        squad_examples.append({
+            "prompt": example["squad_prompt"],
+            "target": example["answer"],
+            "answer": example["answer"]
+        })
     
     with open("data/MultihopEvaluation/self_ask_test.json", "w") as f:
         json.dump(self_ask_examples, f)
     with open("data/MultihopEvaluation/direct_test.json", "w") as f:
         json.dump(direct_examples, f)
+    with open("data/MultihopEvaluation/squad_test.json", "w") as f:
+        json.dump(squad_examples, f)
     del test_examples
     del self_ask_examples
     del direct_examples
+    del squad_examples
 
 
 def generate_finetuning_data(
@@ -131,12 +140,12 @@ def generate_finetuning_data(
 
 
 if __name__ == "__main__":
-    generate_finetuning_data(
-        direct=False, 
-        self_ask=True, 
-        self_ask_examplars=2,
-        sample_size=-1,
-        dev_size=12576
-        )
+    # generate_finetuning_data(
+    #     direct=False, 
+    #     self_ask=True, 
+    #     self_ask_examplars=2,
+    #     sample_size=-1,
+    #     dev_size=12576
+    #     )
 
-    # generate_test_data(sample_size=-1)
+    generate_test_data(sample_size=-1)
