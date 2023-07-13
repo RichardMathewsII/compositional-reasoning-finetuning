@@ -266,17 +266,18 @@ def compute_micro_results(test_examples, responses) -> Dict[str, Any]:
     recall_metrics = []
     f1_metrics = []
     for idx, (test_example, response) in tqdm(enumerate(zip(test_examples, responses))):
-        true_answer = test_example['answer']
-        reference_text = test_example['target']
+        true_answer = test_example['answer'].lower()
+        reference_text = test_example['target'].lower()
 
-        generated_answer = response['answer']
-        generated_response = response['response']
+        generated_answer = response['answer'].lower()
+        generated_response = response['response'].lower()
 
         precision_metrics.append(precision(set(reference_text.split(" ")), set(generated_response.split(" "))))
         recall_metrics.append(recall(set(reference_text.split(" ")), set(generated_response.split(" "))))
         try:
             f1_metrics.append(2 * (precision_metrics[idx] * recall_metrics[idx]) / (precision_metrics[idx] + recall_metrics[idx]))
         except:
+            # division by 0
             f1_metrics.append(0)
         correct_metrics.append(check_correct(generated_answer, true_answer))
     
