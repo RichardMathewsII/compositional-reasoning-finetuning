@@ -1,6 +1,9 @@
 from typing import Any, Dict, List, Tuple, Union
 import spacy
-from transformers import T5Tokenizer
+try:
+    from transformers import T5Tokenizer
+except:
+    pass
 from tqdm import tqdm
 
 
@@ -8,7 +11,10 @@ from tqdm import tqdm
 nlp = spacy.load("en_core_web_sm")
 
 # load T5 tokenizer
-tokenizer = T5Tokenizer.from_pretrained("t5-base")
+try:
+    tokenizer = T5Tokenizer.from_pretrained("t5-base")
+except:
+    pass
 
 class DataAdaptor:
     def __init__(self, dataset: str = "2WikiMultihopQA"):
@@ -59,6 +65,9 @@ class DataAdaptor:
             elif strategy == "direct":
                 for example in tqdm(examples, desc="Generating 2WikiMultihopQA direct training examples"):
                     training_examples.append(adapt_2WikiMultihopQA_to_direct_training_example(example))
+            elif strategy == "squad":
+                for example in tqdm(examples, desc="Generating 2WikiMultihopQA SQUAD training examples"):
+                    training_examples.append(adapt_2WikiMultihopQA_to_squad_example(example))
             else:
                 raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
         elif self.dataset == "CompositionalCelebrities":
@@ -77,7 +86,7 @@ class DataAdaptor:
             example["target"] = "\n".join([line.strip() for line in example["target"].split("\n")])
             if len(examplars) > 0:
                 # add examplars to training examples
-                example["prompt"] = "Examples:\nSTART\n" + "END\n\nSTART\n".join(examplars) + "END\n\n" + example["prompt"]
+                example["prompt"] = "Examples:\nSTART\n" + "\nEND\n\nSTART\n".join(examplars) + "\nEND\n\n" + example["prompt"]
             # structure training example
             structured_example = _structure_training_example(example["prompt"], example["target"])
             structured_training_examples.append(structured_example)
@@ -89,20 +98,24 @@ class DataAdaptor:
         if self.dataset == "2WikiMultihopQA":
             self_ask_examples = self.generate_training_examples(examples, strategy="self-ask", examplars=examplars)
             direct_examples = self.generate_training_examples(examples, strategy="direct")
+            squad_examples = self.generate_training_examples(examples, strategy="squad")
             evaluation_examples = []
-            for self_ask_example, direct_example in zip(self_ask_examples, direct_examples):
+            for self_ask_example, direct_example, squad_example in zip(self_ask_examples, direct_examples, squad_examples):
                 self_ask_prompt = self_ask_example["prompt"]
                 self_ask_target = self_ask_example["target"]
                 direct_prompt = direct_example["prompt"]
                 direct_target = direct_example["target"]
+                squad_prompt = squad_example["prompt"]
                 evaluation_examples.append({
                     "self_ask_prompt_with_examplars": self_ask_prompt,
                     "self_ask_answer": self_ask_target,
                     "direct_prompt": direct_prompt,
+                    "squad_prompt": squad_prompt,
                     "answer": direct_target
                     })
             del self_ask_examples
             del direct_examples
+            del squad_examples
             return evaluation_examples
 
 
@@ -231,6 +244,44 @@ def adapt_2WikiMultihopQA_to_direct_training_example(example: dict) -> str:
     return {"prompt": prompt, "target": target}
 
 
+def adapt_2WikiMultihopQA_to_squad_example(example: dict) -> str:
+    """Adapts a 2WikiMultihopQA example to a text generation training example.
+    The question is modified by adding supporting facts.
+    This is a T5 SQUAD structured prompt.
+    e.g. "question: What is the capital of France? 
+    context: France is a country in Europe. 
+    Answer: Paris"
+
+    Parameters
+    ----------
+    example : dict
+        A 2WikiMultihopQA example.
+
+    Returns
+    -------
+    str
+        A T5 SQUAD text generation training example 
+        of format {'prompt': prompt, 'target': target}.
+    """
+    question = example["question"]
+    answer = example["answer"]
+    supporting_facts = example["supporting_facts"]
+    context = dict(example["context"])
+
+    # training example with supporting context
+    facts = _compose_2WikiMultihopQA_SQUAD_context(supporting_facts, context)
+    prompt = "question: {question} ".format(
+        question=question
+        )
+    prompt += facts
+
+    target = "{answer}".format(answer=answer)
+    # remove white space at the beginning of each line
+    prompt = "\n".join([line.strip() for line in prompt.split("\n")])
+    target = "\n".join([line.strip() for line in target.split("\n")])
+    return {"prompt": prompt, "target": target}
+
+
 def adapt_CompositionalCelebrities_to_self_ask_examplar(example: dict) -> str:
     """Adapts a Compositional Celebrities example to the self-ask structure."""
     question = example["Question"]
@@ -321,14 +372,22 @@ def _structure_training_example(prompt: str, target: str) -> Dict[str, str]:
         {'prompt': prompt, 'target': target, 'num_prompt_tokens': num_prompt_tokens,
         'num_target_tokens': num_target_tokens, 'num_tokens': num_tokens}.
     """
-    prompt_tokens = tokenizer.tokenize(prompt)
-    target_tokens = tokenizer.tokenize(target)
-    return {"prompt": prompt, 
-            "target": target, 
-            "num_prompt_tokens": len(prompt_tokens), 
-            "num_target_tokens": len(target_tokens),
-            "num_tokens": len(prompt_tokens) + len(target_tokens)
-            }
+    try:
+        prompt_tokens = tokenizer.tokenize(prompt)
+        target_tokens = tokenizer.tokenize(target)
+        return {"prompt": prompt, 
+                "target": target, 
+                "num_prompt_tokens": len(prompt_tokens), 
+                "num_target_tokens": len(target_tokens),
+                "num_tokens": len(prompt_tokens) + len(target_tokens)
+                }
+    except:
+        return {"prompt": prompt, 
+                "target": target, 
+                "num_prompt_tokens": None, 
+                "num_target_tokens": None,
+                "num_tokens": None
+                }
 
 
 def _compose_2WikiMultihopQA_facts(supporting_facts: List[List[Union[str, int]]], context: Dict[str, List[str]]) -> str:
@@ -340,6 +399,20 @@ def _compose_2WikiMultihopQA_facts(supporting_facts: List[List[Union[str, int]]]
         sent_id = supp_fact[1]
         fact = context[fact_id][sent_id]
         facts += f"Fact #{idx}: " + fact + "\n"
+    return facts
+
+
+def _compose_2WikiMultihopQA_SQUAD_context(
+        supporting_facts: List[List[Union[str, int]]], 
+        context: Dict[str, List[str]]
+        ) -> str:
+    """Composes the context for a 2WikiMultihopQA example in T5 SQUAD format."""
+    facts = "context: "
+    for idx, supp_fact in enumerate(supporting_facts):
+        fact_id = supp_fact[0]
+        sent_id = supp_fact[1]
+        fact = context[fact_id][sent_id]
+        facts += fact + " "
     return facts
 
 
