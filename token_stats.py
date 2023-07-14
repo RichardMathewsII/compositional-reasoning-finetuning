@@ -22,7 +22,7 @@ def extract_token_counts(strategy: str, split: str) -> Dict[str, List[int]]:
     assert split in ["train", "dev", "test"]
 
     # read data file
-    DATA_DIR = "data/2WikiMultihopQA/"
+    DATA_DIR = "data/FinetuningData/"
     data_file = os.path.join(DATA_DIR, f'{strategy}_{split}.json')
     with open(data_file, 'r') as f:
         data = json.load(f)

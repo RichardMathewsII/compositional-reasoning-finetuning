@@ -33,6 +33,43 @@ def train_dev_split(
     return train_set, dev_set
 
 
+def generate_test_data(sample_size: int = -1) -> None:
+    data = load_2WikiMultihopQA(n_examples=sample_size, split='test')
+    wiki_adaptor = DataAdaptor("2WikiMultihopQA")
+
+    # generate self-ask examplars
+    with open("data/FinetuningData/self_ask_examplars.txt", "r") as f:
+        self_ask_examplars = f.readlines()
+    # aggregate into string
+    self_ask_examplars = "".join(self_ask_examplars)
+    # split on \n\n
+    self_ask_examplars = self_ask_examplars.split("\n\n")[:-1]
+
+    test_examples = wiki_adaptor.generate_evaluation_examples(data, self_ask_examplars)
+
+    self_ask_examples = []
+    direct_examples = []
+    for example in test_examples:
+        self_ask_examples.append({
+            "prompt": example["self_ask_prompt_with_examplars"],
+            "target": example["self_ask_answer"],
+            "answer": example["answer"]
+        })
+        direct_examples.append({
+            "prompt": example["direct_prompt"],
+            "target": example["answer"],
+            "answer": example["answer"]
+        })
+    
+    with open("data/MultihopEvaluation/self_ask_test.json", "w") as f:
+        json.dump(self_ask_examples, f)
+    with open("data/MultihopEvaluation/direct_test.json", "w") as f:
+        json.dump(direct_examples, f)
+    del test_examples
+    del self_ask_examples
+    del direct_examples
+
+
 def generate_finetuning_data(
         direct: bool = True, 
         self_ask: bool = True, 
@@ -49,6 +86,7 @@ def generate_finetuning_data(
     logger.info("Completed: train-dev split")
 
     wiki_adaptor = DataAdaptor("2WikiMultihopQA")
+    path = "data/FinetuningData/"
     
     if direct:
         logger.info("Initiating: generating direct prompt training examples")
@@ -58,9 +96,9 @@ def generate_finetuning_data(
         logger.info("Completed: generating direct prompt training examples")
         # dump direct fine-tuning data to json
         logger.info("Initiating: exporting direct prompt training examples to json")
-        with open("data/2WikiMultihopQA/direct_train.json", "w") as f:
+        with open(path+"direct_train.json", "w") as f:
             json.dump(direct_train_set, f)
-        with open("data/2WikiMultihopQA/direct_dev.json", "w") as f:
+        with open(path+"direct_dev.json", "w") as f:
             json.dump(direct_dev_set, f)
         logger.info("Completed: exporting direct prompt training examples to json")
         # clear data files
@@ -73,7 +111,7 @@ def generate_finetuning_data(
         # generate self-ask examplars
         examplars = wiki_adaptor.generate_examplars(train_set[:self_ask_examplars], "self-ask")
         # write examplars to text file
-        with open("data/2WikiMultihopQA/self_ask_examplars.txt", "w") as f:
+        with open(path+"self_ask_examplars.txt", "w") as f:
             for examplar in examplars:
                 f.write(examplar + "\n")
 
@@ -82,9 +120,9 @@ def generate_finetuning_data(
         logger.info("Completed: generating self-ask prompt training examples")
         # dump self-ask fine-tuning data to json
         logger.info("Initiating: exporting self-ask prompt training examples to json")
-        with open("data/2WikiMultihopQA/self_ask_train.json", "w") as f:
+        with open(path+"self_ask_train.json", "w") as f:
             json.dump(self_ask_train_set, f)
-        with open("data/2WikiMultihopQA/self_ask_dev.json", "w") as f:
+        with open(path+"self_ask_dev.json", "w") as f:
             json.dump(self_ask_dev_set, f)
         logger.info("Completed: exporting self-ask prompt training examples to json")
         # clear data files
@@ -100,3 +138,5 @@ if __name__ == "__main__":
         sample_size=-1,
         dev_size=12576
         )
+
+    # generate_test_data(sample_size=-1)

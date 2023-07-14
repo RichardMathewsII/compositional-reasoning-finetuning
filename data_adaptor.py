@@ -77,13 +77,33 @@ class DataAdaptor:
             example["target"] = "\n".join([line.strip() for line in example["target"].split("\n")])
             if len(examplars) > 0:
                 # add examplars to training examples
-                example["prompt"] = "Example Response\n" + "\nExample Response\n".join(examplars) + "\n" + example["prompt"]
+                example["prompt"] = "Examples:\nSTART\n" + "END\n\nSTART\n".join(examplars) + "END\n\n" + example["prompt"]
             # structure training example
             structured_example = _structure_training_example(example["prompt"], example["target"])
             structured_training_examples.append(structured_example)
         
         del training_examples
         return structured_training_examples
+
+    def generate_evaluation_examples(self, examples: List[Dict[str, Any]], examplars: List[str] = []) -> List[Dict[str, str]]:
+        if self.dataset == "2WikiMultihopQA":
+            self_ask_examples = self.generate_training_examples(examples, strategy="self-ask", examplars=examplars)
+            direct_examples = self.generate_training_examples(examples, strategy="direct")
+            evaluation_examples = []
+            for self_ask_example, direct_example in zip(self_ask_examples, direct_examples):
+                self_ask_prompt = self_ask_example["prompt"]
+                self_ask_target = self_ask_example["target"]
+                direct_prompt = direct_example["prompt"]
+                direct_target = direct_example["target"]
+                evaluation_examples.append({
+                    "self_ask_prompt_with_examplars": self_ask_prompt,
+                    "self_ask_answer": self_ask_target,
+                    "direct_prompt": direct_prompt,
+                    "answer": direct_target
+                    })
+            del self_ask_examples
+            del direct_examples
+            return evaluation_examples
 
 
 def adapt_2WikiMultihopQA_to_self_ask_examplar(example: dict) -> str:
@@ -314,7 +334,7 @@ def _structure_training_example(prompt: str, target: str) -> Dict[str, str]:
 def _compose_2WikiMultihopQA_facts(supporting_facts: List[List[Union[str, int]]], context: Dict[str, List[str]]) -> str:
     
     # add supporting facts to prompt
-    facts = ""
+    facts = "Facts:\n"
     for idx, supp_fact in enumerate(supporting_facts):
         fact_id = supp_fact[0]
         sent_id = supp_fact[1]

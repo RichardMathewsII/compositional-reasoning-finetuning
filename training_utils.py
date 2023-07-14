@@ -1,5 +1,7 @@
 from typing import Dict, List
-import json
+import tensorflow as tf
+import numpy as np
+import pandas as pd
 
 
 def qa_split(examples: List[Dict[str, str]]) -> List[str]:
@@ -99,80 +101,3 @@ class MultihopQADataGenerator(tf.keras.utils.Sequence):
     def on_epoch_end(self):
         if self.shuffle:
             self.row_order = list(np.random.permutation(self.row_order))
-            
-            
-def build_t5_training_wrapper_model(t5_model, max_length):
-    input_ids = layers.Input(shape=(max_length), dtype=tf.int32, name='input_ids')
-    attention_mask = layers.Input(shape=(max_length), dtype=tf.int32, name='attention_mask')
-    decoder_input_ids = layers.Input(shape=(max_length), dtype=tf.int32, name='labels')
-
-    t5_logits = t5_model(input_ids, attention_mask=attention_mask, decoder_input_ids=decoder_input_ids)[0]
-
-    model = tf.keras.models.Model(inputs=[input_ids, attention_mask, decoder_input_ids],
-                                  outputs=[t5_logits])
-    model.compile(optimizer=tf.keras.optimizers.Adam(),
-                  loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),
-                  metrics=['accuracy'])
-
-    return model
-
-def finetune_self_ask(model_name, train_file, valid_file, checkpoint_filepath, max_length = 128, batch_size = 16, epochs = 2):
-  
-    # Create tokenizer and model based on the model_name passed in
-    t5_tokenizer = T5Tokenizer.from_pretrained(model_name)
-    t5_model = TFT5ForConditionalGeneration.from_pretrained(model_name)
-  
-    # Open .JSON file
-    f_train = open(train_file)
-    f_valid = open(valid_file)
-
-    # Read .JSON file to JSON object
-    js_train = json.load(f_train)
-    js_valid = json.load(f_valid)
-  
-    # Close JSON file
-    f_train.close()
-    f_valid.close()
-  
-    # Get number of text pairs for train and valid set.
-    n_train_pairs = len(js_train) #154876
-    n_valid_pairs = len(js_valid) #12576
-  
-    del js_train
-    del js_valid
-  
-    train_data_generator = MultihopQADataGenerator(
-        tokenizer=t5_tokenizer,
-        model=t5_model,
-        n_examples=n_train_pairs,
-        data_filename=train_file,
-      max_length=max_length,
-      batch_size=batch_size
-      )
-    
-    valid_data_generator = MultihopQADataGenerator(
-        tokenizer=t5_tokenizer,
-        model=t5_model,
-        n_examples=n_valid_pairs,
-        data_filename=valid_file,
-        max_length=max_length,
-        batch_size=batch_size
-    )
-  
-    model_wrapper = build_t5_training_wrapper_model(t5_model, max_length)
-
-    model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath=checkpoint_filepath,
-        save_weights_only=True)
-  
-    model_wrapper.fit(train_data_generator,
-                      validation_data=valid_data_generator,
-                      epochs=epochs,
-                      callbacks=[model_checkpoint_callback])
-  
-    return model_wrapper
-            
-            
-            
-            
-            
