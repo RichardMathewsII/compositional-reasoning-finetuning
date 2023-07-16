@@ -1,7 +1,15 @@
 from typing import Dict, List
-import tensorflow as tf
+import os
+import re
 import numpy as np
 import pandas as pd
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+from transformers import T5Tokenizer, TFT5ForConditionalGeneration
+
+import json
 
 
 def qa_split(examples: List[Dict[str, str]]) -> List[str]:
@@ -149,8 +157,8 @@ def finetune_self_ask(model_name, train_file, valid_file, checkpoint_filepath, m
         model=t5_model,
         n_examples=n_train_pairs,
         data_filename=train_file,
-      max_length=max_length,
-      batch_size=batch_size
+        max_length=max_length,
+        batch_size=batch_size
       )
     
     valid_data_generator = MultihopQADataGenerator(
@@ -171,6 +179,7 @@ def finetune_self_ask(model_name, train_file, valid_file, checkpoint_filepath, m
     model_wrapper.fit(train_data_generator,
                       validation_data=valid_data_generator,
                       epochs=epochs,
-                      callbacks=[model_checkpoint_callback])
+                      callbacks=[model_checkpoint_callback],
+                      save_freq=1000)
   
     return model_wrapper
