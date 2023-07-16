@@ -174,12 +174,12 @@ def finetune_self_ask(model_name, train_file, valid_file, checkpoint_filepath, m
 
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_filepath,
-        save_weights_only=True)
+        save_weights_only=True,
+        save_freq=1000)
   
     model_wrapper.fit(train_data_generator,
                       validation_data=valid_data_generator,
                       epochs=epochs,
-                      callbacks=[model_checkpoint_callback],
-                      save_freq=1000)
+                      callbacks=[model_checkpoint_callback])
   
     return model_wrapper
