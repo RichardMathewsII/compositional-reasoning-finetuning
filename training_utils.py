@@ -183,3 +183,39 @@ def finetune_self_ask(model_name, train_file, valid_file, checkpoint_filepath, m
                       callbacks=[model_checkpoint_callback])
   
     return model_wrapper
+
+def filter_token_size(train_file, valid_file, token_size):
+    f_train = open(train_file)
+    f_valid = open(valid_file)
+    
+    js_train = json.load(f_train)
+    js_valid = json.load(f_valid)
+    
+    # Close JSON file
+    f_train.close()
+    f_valid.close()
+    
+    filtered_train = [
+        dictionary for dictionary in js_train
+        if dictionary['num_prompt_tokens'] <= token_size
+        ]
+        
+    filtered_dev = [
+        dictionary for dictionary in js_valid
+        if dictionary['num_prompt_tokens'] <= token_size
+        ]
+        
+    # Serializing json
+    train_object = json.dumps(filtered_train)
+    valid_object = json.dumps(filtered_dev)
+    
+    # create new file name, basically append token_size at the end.
+    f_new_train = train_file.replace(".json", "") + '_' + str(token_size) + '.json'
+    f_new_dev = valid_file.replace(".json", "") + '_' + str(token_size) + '.json'
+    
+    # Writing to sample.json
+    with open(f_new_train, 'w') as outfile:
+        outfile.write(train_object)
+        
+    with open(f_new_dev, 'w') as outfile:
+        outfile.write(valid_object)
