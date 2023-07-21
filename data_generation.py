@@ -54,17 +54,26 @@ def generate_test_data(sample_size: int = -1) -> None:
         self_ask_examples.append({
             "prompt": example["self_ask_prompt_with_examplars"],
             "target": example["self_ask_answer"],
-            "answer": example["answer"]
+            "answer": example["answer"],
+            "num_prompt_tokens": example["self_ask_prompt_tokens"],
+            "num_target_tokens": example["self_ask_target_tokens"],
+            "num_tokens": example["self_ask_tokens"]
         })
         direct_examples.append({
             "prompt": example["direct_prompt"],
             "target": example["answer"],
-            "answer": example["answer"]
+            "answer": example["answer"],
+            "num_prompt_tokens": example["direct_prompt_tokens"],
+            "num_target_tokens": example["direct_target_tokens"],
+            "num_tokens": example["direct_tokens"]
         })
         squad_examples.append({
             "prompt": example["squad_prompt"],
             "target": example["answer"],
-            "answer": example["answer"]
+            "answer": example["answer"],
+            "num_prompt_tokens": example["squad_prompt_tokens"],
+            "num_target_tokens": example["squad_target_tokens"],
+            "num_tokens": example["squad_tokens"]
         })
     
     with open("data/MultihopEvaluation/self_ask_test.json", "w") as f:

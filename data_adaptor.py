@@ -3,7 +3,7 @@ import spacy
 try:
     from transformers import T5Tokenizer
 except:
-    pass
+    print("failed to load tokenizer")
 from tqdm import tqdm
 
 
@@ -103,15 +103,33 @@ class DataAdaptor:
             for self_ask_example, direct_example, squad_example in zip(self_ask_examples, direct_examples, squad_examples):
                 self_ask_prompt = self_ask_example["prompt"]
                 self_ask_target = self_ask_example["target"]
+                self_ask_target_tokens = self_ask_example["num_target_tokens"]
+                self_ask_prompt_tokens = self_ask_example["num_prompt_tokens"]
+                self_ask_tokens = self_ask_example["num_tokens"]
                 direct_prompt = direct_example["prompt"]
                 direct_target = direct_example["target"]
+                direct_target_tokens = direct_example["num_target_tokens"]
+                direct_prompt_tokens = direct_example["num_prompt_tokens"]
+                direct_tokens = direct_example["num_tokens"]
                 squad_prompt = squad_example["prompt"]
+                squad_target_tokens = squad_example["num_target_tokens"]
+                squad_prompt_tokens = squad_example["num_prompt_tokens"]
+                squad_tokens = squad_example["num_tokens"]
                 evaluation_examples.append({
                     "self_ask_prompt_with_examplars": self_ask_prompt,
                     "self_ask_answer": self_ask_target,
                     "direct_prompt": direct_prompt,
                     "squad_prompt": squad_prompt,
-                    "answer": direct_target
+                    "answer": direct_target,
+                    "self_ask_target_tokens": self_ask_target_tokens,
+                    "self_ask_prompt_tokens": self_ask_prompt_tokens,
+                    "self_ask_tokens": self_ask_tokens,
+                    "direct_target_tokens": direct_target_tokens,
+                    "direct_prompt_tokens": direct_prompt_tokens,
+                    "direct_tokens": direct_tokens,
+                    "squad_target_tokens": squad_target_tokens,
+                    "squad_prompt_tokens": squad_prompt_tokens,
+                    "squad_tokens": squad_tokens
                     })
             del self_ask_examples
             del direct_examples
