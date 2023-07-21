@@ -28,22 +28,16 @@ Stage 2: Assess responses
 2. Iterate through (question, true_answer, model_answer) triples
 3. Determine if model_answer matches true_answer
 4. Record 0 for wrong answer, 1 for correct answer in list
-5. Record precision, recall, F1 score for model response
+5. Record rouge, bleu, F1 score for model response
 6. Compute accuracy as sum of list divided by length of list
-7. Compute overall precision, recall, F1 score via averaging
+7. Compute overall rouge, bleu, F1 score via averaging
 8. Save results in json file '{model}-{dataset}-results.json' with format
 {'model': '...', 'dataset': '...',
 'micro_results': {
-    'correct': [0, 1, 1, ...],
-    'precision': [0.##, 0.##, 0.##, ...],
-    'recall': [0.##, 0.##, 0.##, ...], 
-    'F1': [0.##, 0.##, 0.##, ...]
+    ...
     },
 'macro_results': {
-    'accuracy': 0.##, 
-    'F1': 0.##, 
-    'precision': 0.##, 
-    'recall': 0.##
+    ...
     }
 }
 """
@@ -57,7 +51,8 @@ from data_loaders import load_TestData
 from tqdm import tqdm
 from thefuzz import fuzz
 import argparse
-from nltk.metrics.scores import precision, recall
+from nltk.translate.bleu_score import sentence_bleu
+from rouge_score import rouge_scorer
 from transformers import TFT5ForConditionalGeneration, T5Tokenizer
 from loguru import logger
 
@@ -75,29 +70,51 @@ class EvaluationConfig(object):
                 self._set_t5_tokenizer()
     
     def _set_t5_tokenizer(self):
-        tokenizer = T5Tokenizer.from_pretrained("t5-base")
+        if "flan-t5-small" in self.model:
+            tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-small")
+        elif "t5-small" in self.model:
+            tokenizer = T5Tokenizer.from_pretrained("t5-small")
+        else:
+            raise ValueError("Model not found.")
         from tokenizers import AddedToken
         tokenizer.add_tokens(AddedToken("\n", normalized=False))  # self-ask uses newline breaks
         self.tokenizer_ = tokenizer
-        self.tokenizer_config_ = {"max_length": 1024, "truncation": True, "return_tensors": "pt", "padding": "longest"}
+        if self.dataset == "self-ask":
+            max_length = 300
+        elif self.dataset == "direct":
+            max_length = 130
+        self.tokenizer_config_ = {"max_length": max_length, "truncation": True, "return_tensors": "pt", "padding": "longest"}
 
 
 def load_model(config: EvaluationConfig) -> Any:
     '''Loads a model object.'''
     model = config.model
-    if model == 't5-11b-finetuned':
-        path = "models/t5-11b-finetuned.pkl"
-    elif model == 't5-3b-finetuned':
-        path = "models/t5-3b-finetuned.pkl"
-    elif model == 't5-11b':
-        return TFT5ForConditionalGeneration.from_pretrained("t5-11b")
-    elif model == 't5-3b':
-        return TFT5ForConditionalGeneration.from_pretrained("t5-3b")
-    elif model == "t5-small":
-        return TFT5ForConditionalGeneration.from_pretrained("t5-small")
+    if model == 'flan-t5-small-self-ask':
+        path = f"models/{model}.h5"
+        return TFT5ForConditionalGeneration.from_pretrained(path)
+    if model == 'flan-t5-small-direct':
+        path = f"models/{model}.h5"
+        return TFT5ForConditionalGeneration.from_pretrained(path)
+    if model == 't5-small-self-ask':
+        path = f"models/{model}.h5"
+        return TFT5ForConditionalGeneration.from_pretrained(path)
+    if model == 't5-small-direct':
+        path = f"models/{model}.h5"
+        return TFT5ForConditionalGeneration.from_pretrained(path)
+    elif model == 't5-small':
+        path = "t5-small"
+        return TFT5ForConditionalGeneration.from_pretrained(path)
+    elif model == 'flan-t5-small':
+        path = "google/flan-t5-small"
+        return TFT5ForConditionalGeneration.from_pretrained(path)
+    elif model == 'opt-small-self-ask':
+        pass # TODO: implement
+    elif model == 'opt-small-direct':
+        pass # TODO: implement
+    elif model == 'opt-small':
+        pass # TODO: implement
     else:
         raise ValueError("Model not found.")
-    pass
 
 
 def load_batch(config: EvaluationConfig, idx_range: Tuple[int, int]) -> List[Dict[str, str]]:
@@ -114,8 +131,8 @@ def load_batch(config: EvaluationConfig, idx_range: Tuple[int, int]) -> List[Dic
 def preprocess_questions(questions: List[str], config: EvaluationConfig) -> List[str]:
     model = config.model
     dataset = config.dataset
-    if "t5" in model and "direct" in dataset:
-        questions = [q+" The answer is:" for q in questions]
+    # if "t5" in model and "direct" in dataset:
+    #     questions = [q+" The answer is:" for q in questions]
     return questions
 
 
@@ -252,19 +269,29 @@ def check_correct(generated_answer: str, true_answer: str) -> int:
 
 def compute_micro_results(test_examples, responses) -> Dict[str, Any]:
     '''Computes micro results for each question in the test set.
+
+    Metrics are precision (bleu), recall (rouge), and F1 score, computed
+    for unigrams and bigrams.
     
     Returns a dictionary with the following keys:
     {
         'correct': [0, 1, 1, ...], 
-        'precision': [0.##, 0.##, 0.##, ...],
-        'recall': [0.##, 0.##, 0.##, ...], 
-        'F1': [0.##, 0.##, 0.##, ...]
+        'bleu-1': [0.##, 0.##, 0.##, ...],
+        'bleu-2': [0.##, 0.##, 0.##, ...],
+        'rouge-1': [0.##, 0.##, 0.##, ...],
+        'rouge-2': [0.##, 0.##, 0.##, ...], 
+        'F1-1': [0.##, 0.##, 0.##, ...],
+        'F1-2': [0.##, 0.##, 0.##, ...]
     }
     '''
     correct_metrics = []
-    precision_metrics = []
-    recall_metrics = []
-    f1_metrics = []
+    bleu1_metrics = []
+    bleu2_metrics = []
+    rouge1_metrics = []
+    rouge2_metrics = []
+    f1_1_metrics = []
+    f1_2_metrics = []
+    rouge = rouge_scorer(["rouge1", "rouge2"], use_stemmer=True)
     for idx, (test_example, response) in tqdm(enumerate(zip(test_examples, responses))):
         true_answer = test_example['answer'].lower()
         reference_text = test_example['target'].lower()
@@ -272,20 +299,23 @@ def compute_micro_results(test_examples, responses) -> Dict[str, Any]:
         generated_answer = response['answer'].lower()
         generated_response = response['response'].lower()
 
-        precision_metrics.append(precision(set(reference_text.split(" ")), set(generated_response.split(" "))))
-        recall_metrics.append(recall(set(reference_text.split(" ")), set(generated_response.split(" "))))
-        try:
-            f1_metrics.append(2 * (precision_metrics[idx] * recall_metrics[idx]) / (precision_metrics[idx] + recall_metrics[idx]))
-        except:
-            # division by 0
-            f1_metrics.append(0)
+        rouge_scores = rouge.score(set(reference_text.split(" ")), set(generated_response.split(" ")))
+        rouge1_metrics.append(rouge_scores["rouge1"].recall)
+        rouge2_metrics.append(rouge_scores["rouge2"].recall)
+        bleu1_metrics.append(rouge_scores["rouge1"].precision)
+        bleu2_metrics.append(rouge_scores["rouge2"].precision)
+        f1_1_metrics.append(rouge_scores["rouge1"].fmeasure)
+        f1_2_metrics.append(rouge_scores["rouge2"].fmeasure)
         correct_metrics.append(check_correct(generated_answer, true_answer))
     
     return {
         'correct': correct_metrics, 
-        'precision': precision_metrics,
-        'recall': recall_metrics, 
-        'F1': f1_metrics
+        'bleu-1': bleu1_metrics,
+        'bleu-2': bleu2_metrics,
+        'rouge-1': rouge1_metrics, 
+        'rouge-2': rouge2_metrics,
+        'F1-1': f1_1_metrics,
+        'F1-2': f1_2_metrics
     }
 
 
@@ -295,24 +325,36 @@ def compute_macro_results(micro_results: Dict[str, Any]) -> Dict[str, Any]:
     Returns a dictionary with the following keys:
     {
         'accuracy': 0.##, 
-        'F1': 0.##, 
-        'precision': 0.##, 
-        'recall': 0.##
+        'F1-1': 0.##, 
+        'F1-2': 0.##,
+        'bleu-1': 0.##, 
+        'bleu-2': 0.##,
+        'rouge-1': 0.##,
+        'rouge-2': 0.##
     }
     '''
     correct_metrics = micro_results['correct']
-    precision_metrics = micro_results['precision']
-    recall_metrics = micro_results['recall']
-    f1_metrics = micro_results['F1']
+    bleu1_metrics = micro_results['bleu-1']
+    bleu2_metrics = micro_results['bleu-2']
+    rouge1_metrics = micro_results['rouge-1']
+    rouge2_metrics = micro_results['rouge-2']
+    f1_1_metrics = micro_results['F1-1']
+    f1_2_metrics = micro_results['F1-2']
     accuracy = round(sum(correct_metrics) / len(correct_metrics), 4)
-    precision = round(sum(precision_metrics) / len(precision_metrics), 4)
-    recall = round(sum(recall_metrics) / len(recall_metrics), 4)
-    f1 = round(sum(f1_metrics) / len(f1_metrics), 4)
+    bleu1 = round(sum(bleu1_metrics) / len(bleu1_metrics), 4)
+    bleu2 = round(sum(bleu2_metrics) / len(bleu2_metrics), 4)
+    rouge1 = round(sum(rouge1_metrics) / len(rouge1_metrics), 4)
+    rouge2 = round(sum(rouge2_metrics) / len(rouge2_metrics), 4)
+    f1_1 = round(sum(f1_1_metrics) / len(f1_1_metrics), 4)
+    f1_2 = round(sum(f1_2_metrics) / len(f1_2_metrics), 4)
     return {
-        'accuracy': accuracy, 
-        'F1': f1, 
-        'precision': precision, 
-        'recall': recall
+        'accuracy': accuracy,
+        'F1-1': f1_1,
+        'F1-2': f1_2,
+        'bleu-1': bleu1,
+        'bleu-2': bleu2,
+        'rouge-1': rouge1,
+        'rouge-2': rouge2
     }
 
 
@@ -332,7 +374,17 @@ if __name__ == "__main__":
     # set log file
     logger.add("logs/evaluation.log", rotation="500 MB", compression="zip")
 
-    model_options = ['t5-11b-finetuned', 't5-3b-finetuned', 't5-11b', 't5-3b']
+    model_options = [
+        'flan-t5-small',
+        'flan-t5-small-self-ask',
+        'flan-t5-small-direct',
+        't5-small',
+        't5-small-self-ask',
+        't5-small-direct',
+        'opt-small-self-ask',
+        'opt-small-direct',
+        'opt-small'
+        ]
     dataset_options = ['direct', 'self-ask']
     path = "data/MultihopEvaluation/"
 
@@ -351,9 +403,9 @@ if __name__ == "__main__":
     # if args.dataset not in dataset_options:
     #     raise ValueError(f"Dataset must be one of {dataset_options}")
 
-    MODEL = "t5-3b" if args.model is None else args.model
-    DATASET = "direct" if args.dataset is None else args.dataset
-    SIZE = 12576 if args.size is None else args.size  # full size
+    MODEL = args.model
+    DATASET = args.dataset
+    SIZE = args.size  # full size
     BATCH_SIZE = 100 if args.batch_size is None else args.batch_size
 
     config = EvaluationConfig(MODEL, DATASET, path)
@@ -368,7 +420,7 @@ if __name__ == "__main__":
         start_idx = idx
         end_idx = min(idx + BATCH_SIZE, SIZE)
         batch = load_batch(config, (start_idx, end_idx))
-        questions, answers = qa_split(batch)
+        questions, _, _ = qa_split(batch, triple=True)
         questions = preprocess_questions(questions, config)
         question_encodings = tokenize(questions, config)
         responses = []
@@ -380,7 +432,7 @@ if __name__ == "__main__":
             responses.append({'response': response, 'answer': answer, 'self_ask': self_ask})
         
         store_responses(responses, config)
-        del batch, questions, answers, question_encodings, responses, text_responses, tokenized_responses
+        del batch, questions, question_encodings, responses, text_responses, tokenized_responses
     del model
     logger.info("done")
 
