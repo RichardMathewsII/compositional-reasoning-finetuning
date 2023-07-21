@@ -12,14 +12,20 @@ from transformers import T5Tokenizer, TFT5ForConditionalGeneration
 import json
 
 
-def qa_split(examples: List[Dict[str, str]]) -> List[str]:
+def qa_split(examples: List[Dict[str, str]], triple=False) -> List[str]:
     '''Splits the examples into questions and answers.
     
     Adapts structure of output of load_FinetuningData for tokenizer.
     '''
-    questions = [example["prompt"] for example in examples]
-    answers = [example["target"] for example in examples]
-    return questions, answers
+    if triple:
+        questions = [example["prompt"] for example in examples]
+        targets = [example["target"] for example in examples]
+        answers = [example["answer"] for example in examples]
+        return questions, targets, answers
+    else:
+        questions = [example["prompt"] for example in examples]
+        answers = [example["target"] for example in examples]
+        return questions, answers
 
 
 def preprocess_data(text_pairs, tokenizer, model, max_length=512):
