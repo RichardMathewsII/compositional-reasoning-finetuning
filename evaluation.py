@@ -79,10 +79,7 @@ class EvaluationConfig(object):
         from tokenizers import AddedToken
         tokenizer.add_tokens(AddedToken("\n", normalized=False))  # self-ask uses newline breaks
         self.tokenizer_ = tokenizer
-        if self.dataset == "self-ask":
-            max_length = 300
-        elif self.dataset == "direct":
-            max_length = 130
+        max_length = 300
         self.tokenizer_config_ = {"max_length": max_length, "truncation": True, "return_tensors": "pt", "padding": "longest"}
 
 
