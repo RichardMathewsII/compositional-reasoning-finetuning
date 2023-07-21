@@ -127,7 +127,7 @@ def build_t5_training_wrapper_model(t5_model, max_length):
     return model
 
 
-def finetune_self_ask(model_name, train_file, valid_file, checkpoint_filepath, max_length = 128, batch_size = 16, epochs = 2):
+def finetune_self_ask(model_name, train_file, valid_file, checkpoint_filepath, max_length = 128, batch_size = 16, epochs = 2, load_in_8bit=False, previous_checkpoint=""):
   
     # Create tokenizer and model based on the model_name passed in
     t5_tokenizer = T5Tokenizer.from_pretrained(model_name)
@@ -171,6 +171,9 @@ def finetune_self_ask(model_name, train_file, valid_file, checkpoint_filepath, m
     )
   
     model_wrapper = build_t5_training_wrapper_model(t5_model, max_length)
+    
+    if previous_checkpoint != "":
+        model_wrapper.load_weights(previous_checkpoint)
 
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_filepath,
