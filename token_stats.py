@@ -18,11 +18,14 @@ def extract_token_counts(strategy: str, split: str) -> Dict[str, List[int]]:
     """
     Extracts token counts from data files.
     """
-    assert strategy in ["self_ask", "direct"]
+    assert strategy in ["self_ask", "direct", "squad"]
     assert split in ["train", "dev", "test"]
 
     # read data file
-    DATA_DIR = "data/FinetuningData/"
+    if split == "test":
+        DATA_DIR = "data/MultihopEvaluation/"
+    else:
+        DATA_DIR = "data/FinetuningData/"
     data_file = os.path.join(DATA_DIR, f'{strategy}_{split}.json')
     with open(data_file, 'r') as f:
         data = json.load(f)
