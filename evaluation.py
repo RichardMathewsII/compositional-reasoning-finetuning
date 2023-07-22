@@ -1,9 +1,18 @@
 """
 Evaluation workflow:
 
+Datasets
+- Format: '<finetuning-status>-<examplar-status>.json'
+    - <finetuning-status> = 'direct' or 'self-ask' or 'baseline'
+    - <examplar-status> = 'with-examplars' or 'without-examplars'
+- e.g. Testing a self-ask finetuned model with examplars would be 
+'self-ask-with-examplars.json'
+- e.g. Testing a baseline model without examplars would be
+'baseline-without-examplars.json'
+
 Stage 0: Setup
 1. Specify model
-2. Specify dataset (direct vs self-ask)
+2. Specify dataset (with or without examplars)
 3. Specify path to json file to store responses
 4. Specify size of dataset
 5. Specify batch size
@@ -31,8 +40,8 @@ Stage 2: Assess responses
 5. Record rouge, bleu, F1 score for model response
 6. Compute accuracy as sum of list divided by length of list
 7. Compute overall rouge, bleu, F1 score via averaging
-8. Save results in json file '{model}-{dataset}-results.json' with format
-{'model': '...', 'dataset': '...',
+8. Save results in json file '{model}-{examplar-status}-results.json' with format
+{'model': '...', 'finetuning': '...', 'examplars': '...',
 'micro_results': {
     ...
     },
@@ -43,15 +52,12 @@ Stage 2: Assess responses
 """
 
 from dataclasses import dataclass
-from difflib import SequenceMatcher
 from typing import Any, Dict, List, Tuple, Iterable
 from training_utils import qa_split, build_t5_training_wrapper_model
 import json
 from data_loaders import load_TestData
 from tqdm import tqdm
-from thefuzz import fuzz
 import argparse
-from nltk.translate.bleu_score import sentence_bleu
 from rouge_score.rouge_scorer import RougeScorer
 from transformers import TFT5ForConditionalGeneration, T5Tokenizer
 from loguru import logger
@@ -60,15 +66,41 @@ from loguru import logger
 class EvaluationConfig(object):
     """Configures evaluation workflow."""
     model: str
-    dataset: str
+    examplars: bool  # whether to include examplars in prompt
     path: str
+    max_length: int = 300
     create_tokenizer: bool = True
     
     def __post_init__(self):
         if self.create_tokenizer:
             if "t5" in self.model:
                 self._set_t5_tokenizer()
+        # set examplar status
+        if self.examplars:
+            self.examplar_status_ = "with-examplars"
+        else:
+            self.examplar_status_ = "without-examplars"
+        # set finetuning status
+        if "self-ask" in self.model:
+            self.finetuning_status_ = "self-ask"
+        elif "direct" in self.model:
+            self.finetuning_status_ = "direct"
+        else:
+            self.finetuning_status_ = "baseline"
     
+    def generate_test_set_file(self) -> str:
+        if self.finetuning_status_ == "direct" and self.examplar_status_ == "with-examplars":
+            # same dataset as self-ask with examplars
+            return f"{self.path}self-ask-with-examplars.json"
+        else:
+            return f"{self.path}{self.finetuning_status_}-{self.examplar_status_}.json"
+    
+    def generate_responses_file(self) -> str:
+        return f"{self.path}{self.model}-{self.examplar_status_}-responses.json"
+    
+    def generate_results_file(self) -> str:
+        return f"{self.path}{self.model}-{self.examplar_status_}-results.json"
+
     def _set_t5_tokenizer(self):
         if "flan-t5-small" in self.model:
             tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-small")
@@ -79,8 +111,7 @@ class EvaluationConfig(object):
         # from tokenizers import AddedToken
         # tokenizer.add_tokens(AddedToken("\n", normalized=False))  # self-ask uses newline breaks
         self.tokenizer_ = tokenizer
-        max_length = 300
-        self.tokenizer_config_ = {"max_length": max_length, "truncation": True, "return_tensors": "pt", "padding": "longest"}
+        self.tokenizer_config_ = {"max_length": self.max_length, "truncation": True, "return_tensors": "pt", "padding": "longest"}
 
 
 def load_model(config: EvaluationConfig) -> Any:
@@ -128,20 +159,15 @@ def load_model(config: EvaluationConfig) -> Any:
 
 def load_batch(config: EvaluationConfig, idx_range: Tuple[int, int]) -> List[Dict[str, str]]:
     '''Loads a slice of the test set.'''
-    dataset = config.dataset
-    file = config.path+f"{dataset.replace('-', '_')}_test.json"
-    with open(file, 'r') as f:
-        data = json.load(f)
+    file = config.generate_test_set_file()
+    data = load_TestData(file=file, n_examples=-1)
     batch = data[idx_range[0]:idx_range[1]]
     del data
     return batch
 
 
 def preprocess_questions(questions: List[str], config: EvaluationConfig) -> List[str]:
-    model = config.model
-    dataset = config.dataset
-    # if "t5" in model and "direct" in dataset:
-    #     questions = [q+" The answer is:" for q in questions]
+    # just in case
     return questions
 
 
@@ -229,16 +255,14 @@ def check_self_ask(generated_text: str) -> bool:
 
 
 def clear_responses_file(config: EvaluationConfig):
-    storage_path = config.path
-    file = f"{storage_path}{config.model}-{config.dataset}.json"
+    file = config.generate_responses_file()
     with open(file, 'w') as f:
         pass
 
 
 def store_responses(responses: List[Dict[str, Any]], config: EvaluationConfig) -> None:
     '''Stores responses in a json file.'''
-    storage_path = config.path
-    file = f"{storage_path}{config.model}-{config.dataset}.json"
+    file = config.generate_responses_file()
     try:
         # file exists
         with open(file,'r') as f:
@@ -253,8 +277,7 @@ def store_responses(responses: List[Dict[str, Any]], config: EvaluationConfig) -
 
 def load_responses(config: EvaluationConfig) -> List[Dict[str, Any]]:
     '''Loads responses from a json file.'''
-    storage_path = config.path
-    file = f"{storage_path}{config.model}-{config.dataset}.json"
+    file = config.generate_responses_file()
     with open(file, 'r') as f:
         responses = json.load(f)
     return responses
@@ -267,17 +290,11 @@ def check_correct(generated_answer: str, true_answer: str) -> int:
     -------
     0 if wrong, 1 if correct
     '''
-    # use similarity, strings may not be exact match
-    # score = fuzz.partial_ratio(generated_answer.strip().lower(), true_answer.strip().lower())
-    # if score > 95:
-    #     return 1
-    # else:
-    #     return 0
     # recall based
     return true_answer.strip().lower() in generated_answer.strip().lower()
 
 
-def compute_micro_results(test_examples, responses) -> Dict[str, Any]:
+def compute_micro_results(answers, targets, responses) -> Dict[str, Any]:
     '''Computes micro results for each question in the test set.
 
     Metrics are precision (bleu), recall (rouge), and F1 score, computed
@@ -286,8 +303,11 @@ def compute_micro_results(test_examples, responses) -> Dict[str, Any]:
     Returns a dictionary with the following keys:
     {
         'correct': [0, 1, 1, ...], 
+        'bleu-1': [0.##, 0.##, 0.##, ...],
+        'bleu-2': [0.##, 0.##, 0.##, ...],
         'rouge-1': [0.##, 0.##, 0.##, ...],
-        'rouge-2': [0.##, 0.##, 0.##, ...], 
+        'rouge-2': [0.##, 0.##, 0.##, ...],
+        'rouge-L': [0.##, 0.##, 0.##, ...], 
         'F1-1': [0.##, 0.##, 0.##, ...],
         'F1-2': [0.##, 0.##, 0.##, ...]
     }
@@ -301,9 +321,7 @@ def compute_micro_results(test_examples, responses) -> Dict[str, Any]:
     f1_1_metrics = []
     f1_2_metrics = []
     rouge = RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=True)
-    for idx, (test_example, response) in tqdm(enumerate(zip(test_examples, responses))):
-        true_answer = test_example['answer']
-        reference_text = test_example['target']
+    for idx, (true_answer, reference_text, response) in tqdm(enumerate(zip(answers, targets, responses))):
 
         generated_answer = response['answer']
         generated_response = response['response']
@@ -341,7 +359,8 @@ def compute_macro_results(micro_results: Dict[str, Any]) -> Dict[str, Any]:
         'bleu-1': 0.##, 
         'bleu-2': 0.##,
         'rouge-1': 0.##,
-        'rouge-2': 0.##
+        'rouge-2': 0.##,
+        'rouge-L': 0.##,
     }
     '''
     correct_metrics = micro_results['correct']
@@ -374,8 +393,7 @@ def compute_macro_results(micro_results: Dict[str, Any]) -> Dict[str, Any]:
 
 def store_evaluation_results(results: Dict, config: EvaluationConfig) -> None:
     '''Stores evaluation results in a json file.'''
-    storage_path = config.path
-    file = f"{storage_path}{config.model}-{config.dataset}-results.json"
+    file = config.generate_results_file()
     with open(file, 'w') as f:
         json.dump(results, f)
 
@@ -399,44 +417,63 @@ if __name__ == "__main__":
         'opt-small-direct',
         'opt-small'
         ]
-    dataset_options = ['direct', 'self-ask']
     path = "data/MultihopEvaluation/"
 
     # Stage 0: Setup
     parser = argparse.ArgumentParser(description='Run llm QA evaluation.')
     parser.add_argument('--model', help=f'Language model id, one of {model_options}', type=str)
-    parser.add_argument('--dataset', help=f'Dataset type, one of {dataset_options}', type=str)
-    parser.add_argument('--size', help='Size of dataset to evaluate on', type=int)
-    parser.add_argument('--batch_size', help='Batch size', type=int)
+    parser.add_argument('--examplars', help='Whether to include self-ask examplars in test prompt', type=bool)
+    parser.add_argument('--max_length', default=300, help='Max token length for tokenization', type=int)
+    parser.add_argument('--size', help='Size of dataset to evaluate on, pass -1 for full dataset', type=int)
+    parser.add_argument('--batch_size', default=100, help='Batch size', type=int)
 
     args = parser.parse_args()
 
-    # TODO: uncomment during production
-    # if args.model not in model_options:
-    #     raise ValueError(f"Model must be one of {model_options}")
-    # if args.dataset not in dataset_options:
-    #     raise ValueError(f"Dataset must be one of {dataset_options}")
+    if args.model not in model_options:
+        raise ValueError(f"Model must be one of {model_options}")
 
     MODEL = args.model
-    DATASET = args.dataset
-    SIZE = args.size  # full size
-    BATCH_SIZE = 100 if args.batch_size is None else args.batch_size
+    MAX_LENGTH = args.max_length
+    EXAMPLARS = args.examplars
+    assert isinstance(EXAMPLARS, bool), "EXAMPLARS must be a boolean"
+    BATCH_SIZE = args.batch_size
 
-    config = EvaluationConfig(MODEL, DATASET, path)
+    config = EvaluationConfig(model=MODEL, examplars=EXAMPLARS, path=path, max_length=MAX_LENGTH)
+    if args.size == -1:
+        # full size
+        test_set = load_TestData(file=config.generate_test_set_file(), n_examples=-1)
+        SIZE = len(test_set)
+        del test_set
+    else:
+        SIZE = args.size
+
     clear_responses_file(config)
 
     # Stage 1: Collect responses
     logger.info("Loading {model} model", model=MODEL)
     model = load_model(config)
+
+    answers_encoded_decoded = []
+    targets_encoded_decoded = []
     
     logger.info("Collecting model responses...")
     for idx in tqdm(range(0, SIZE, BATCH_SIZE)):
+        # load batch and process questions
         start_idx = idx
         end_idx = min(idx + BATCH_SIZE, SIZE)
         batch = load_batch(config, (start_idx, end_idx))
-        questions, _, _ = qa_split(batch, triple=True)
+        questions, targets, answers = qa_split(batch, triple=True)
         questions = preprocess_questions(questions, config)
         question_encodings = tokenize(questions, config)
+
+        # pass answers and targets through tokenizer
+        # to normalize text with model responses (fair comparison)
+        answer_encodings = tokenize(answers, config)
+        target_encodings = tokenize(targets, config)
+        answers_encoded_decoded += decode(answer_encodings, config)
+        targets_encoded_decoded += decode(target_encodings, config)
+
+        # ask questions and store responses
         responses = []
         tokenized_responses = ask_questions(model, question_encodings, config)
         text_responses = decode(tokenized_responses, config)
@@ -447,6 +484,7 @@ if __name__ == "__main__":
         
         store_responses(responses, config)
         del batch, questions, question_encodings, responses, text_responses, tokenized_responses
+        del answer_encodings, target_encodings
     del model
     logger.info("done")
 
@@ -454,15 +492,20 @@ if __name__ == "__main__":
     responses = load_responses(config)
     assert len(responses) == SIZE, \
     "size mismatch between stored responses and SIZE, delete responses file and rerun"
-    test_set = load_TestData(strategy=config.dataset, n_examples=SIZE)
-    assert len(responses) == len(test_set), \
-    f"size mismatch between responses and test_set: responses is size {len(responses)}; test_set is size {len(test_set)}"
-
+    
     logger.info("Computing results...")
-    micro_results = compute_micro_results(test_set, responses)
+    micro_results = compute_micro_results(
+        answers_encoded_decoded, 
+        targets_encoded_decoded, 
+        responses)
 
     macro_results = compute_macro_results(micro_results)
     logger.info("done")
     
-    results = {'model': config.model, 'dataset': config.dataset, 'micro_results': micro_results, 'macro_results': macro_results}
+    results = {
+        'model': config.model, 
+        "finetuning": config.finetuning_status_, 
+        'examplars': config.examplars, 
+        'micro_results': micro_results, 
+        'macro_results': macro_results}
     store_evaluation_results(results, config)
