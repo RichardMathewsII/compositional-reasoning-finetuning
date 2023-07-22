@@ -14,19 +14,24 @@ with open("logs/token_stats.log", "w") as f:
 logger.add("logs/token_stats.log", rotation="500 MB")
 
 
-def extract_token_counts(strategy: str, split: str) -> Dict[str, List[int]]:
+def extract_token_counts(strategy: str, split: str, examplars: bool = False) -> Dict[str, List[int]]:
     """
     Extracts token counts from data files.
     """
-    assert strategy in ["self_ask", "direct", "squad"]
+    assert strategy in ["self_ask", "direct", "baseline", "self-ask"]
     assert split in ["train", "dev", "test"]
 
     # read data file
     if split == "test":
         DATA_DIR = "data/MultihopEvaluation/"
+        if examplars:
+            examplar_status = "with-examplars"
+        else:
+            examplar_status = "without-examplars"
+        data_file = os.path.join(DATA_DIR, f'{strategy}-{examplar_status}.json')
     else:
         DATA_DIR = "data/FinetuningData/"
-    data_file = os.path.join(DATA_DIR, f'{strategy}_{split}.json')
+        data_file = os.path.join(DATA_DIR, f'{strategy}_{split}.json')
     with open(data_file, 'r') as f:
         data = json.load(f)
     

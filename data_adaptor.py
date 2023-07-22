@@ -12,7 +12,7 @@ nlp = spacy.load("en_core_web_sm")
 
 # load T5 tokenizer
 try:
-    tokenizer = T5Tokenizer.from_pretrained("t5-base")
+    tokenizer = T5Tokenizer.from_pretrained("t5-small", model_max_length=1000)
 except:
     pass
 
@@ -102,13 +102,21 @@ class DataAdaptor:
             squad_examples = self.generate_training_examples(examples, strategy="squad")
             squad_examples_with_examplars = self.generate_training_examples(examples, strategy="squad", examplars=examplars)
             evaluation_examples = []
-            for self_ask_example, direct_example, squad_example in zip(self_ask_examples, direct_examples, squad_examples):
+            for (self_ask_example, 
+            self_ask_example_without_examplar, 
+            direct_example, 
+            squad_example, 
+            squad_example_with_examplar) in zip(self_ask_examples, 
+            self_ask_examples_without_examplars, 
+            direct_examples, 
+            squad_examples,
+            squad_examples_with_examplars):
                 # prompts
                 self_ask_prompt = self_ask_example["prompt"]
-                self_ask_prompt_without_examplars = self_ask_examples_without_examplars["prompt"]
+                self_ask_prompt_without_examplars = self_ask_example_without_examplar["prompt"]
                 direct_prompt = direct_example["prompt"]
                 squad_prompt = squad_example["prompt"]
-                squad_prompt_with_examplars = squad_examples_with_examplars["prompt"]
+                squad_prompt_with_examplars = squad_example_with_examplar["prompt"]
 
                 # targets
                 self_ask_target = self_ask_example["target"]
@@ -118,16 +126,17 @@ class DataAdaptor:
                 self_ask_target_tokens = self_ask_example["num_target_tokens"]
                 self_ask_prompt_tokens = self_ask_example["num_prompt_tokens"]
                 self_ask_tokens = self_ask_example["num_tokens"]
-                self_ask_prompt_without_examplars_tokens = self_ask_examples_without_examplars["num_prompt_tokens"]
-                self_ask_without_examplars_tokens = self_ask_examples_without_examplars["num_tokens"]
+                self_ask_prompt_without_examplars_tokens = self_ask_example_without_examplar["num_prompt_tokens"]
+                self_ask_without_examplars_tokens = self_ask_example_without_examplar["num_tokens"]
                 direct_target_tokens = direct_example["num_target_tokens"]
                 direct_prompt_tokens = direct_example["num_prompt_tokens"]
                 direct_tokens = direct_example["num_tokens"]
                 squad_target_tokens = squad_example["num_target_tokens"]
-                squad_prompt_with_examplars_tokens = squad_examples_with_examplars["num_prompt_tokens"]
+                squad_target_with_examplars_tokens = self_ask_example["num_target_tokens"]
+                squad_prompt_with_examplars_tokens = squad_example_with_examplar["num_prompt_tokens"]
                 squad_prompt_tokens = squad_example["num_prompt_tokens"]
                 squad_tokens = squad_example["num_tokens"]
-                squad_with_examplars_tokens = squad_examples_with_examplars["num_tokens"]
+                squad_with_examplars_tokens = squad_target_with_examplars_tokens + squad_prompt_with_examplars_tokens
 
                 evaluation_examples.append({
                     # prompts
@@ -151,14 +160,17 @@ class DataAdaptor:
                     "direct_prompt_tokens": direct_prompt_tokens,
                     "direct_tokens": direct_tokens,
                     "squad_target_tokens": squad_target_tokens,
+                    "squad_target_with_examplars_tokens": squad_target_with_examplars_tokens,
                     "squad_prompt_tokens": squad_prompt_tokens,
                     "squad_prompt_with_examplars_tokens": squad_prompt_with_examplars_tokens,
                     "squad_tokens": squad_tokens,
                     "squad_with_examplars_tokens": squad_with_examplars_tokens
                     })
             del self_ask_examples
+            del self_ask_examples_without_examplars
             del direct_examples
             del squad_examples
+            del squad_examples_with_examplars
             return evaluation_examples
 
 

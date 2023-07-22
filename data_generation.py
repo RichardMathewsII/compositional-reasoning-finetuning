@@ -93,7 +93,7 @@ def generate_test_data(sample_size: int = -1) -> None:
             "target": example["self_ask_answer"],
             "answer": example["answer"],
             "num_prompt_tokens": example["squad_prompt_with_examplars_tokens"],
-            "num_target_tokens": example["squad_target_tokens"],
+            "num_target_tokens": example["squad_target_with_examplars_tokens"],
             "num_tokens": example["squad_with_examplars_tokens"]
         })
     

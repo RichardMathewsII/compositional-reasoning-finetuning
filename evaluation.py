@@ -67,7 +67,8 @@ class EvaluationConfig(object):
     """Configures evaluation workflow."""
     model: str
     examplars: bool  # whether to include examplars in prompt
-    path: str
+    data_path: str
+    results_path: str
     max_length: int = 300
     create_tokenizer: bool = True
     
@@ -91,61 +92,83 @@ class EvaluationConfig(object):
     def generate_test_set_file(self) -> str:
         if self.finetuning_status_ == "direct" and self.examplar_status_ == "with-examplars":
             # same dataset as self-ask with examplars
-            return f"{self.path}self-ask-with-examplars.json"
+            return f"{self.data_path}self-ask-with-examplars.json"
         else:
-            return f"{self.path}{self.finetuning_status_}-{self.examplar_status_}.json"
+            return f"{self.data_path}{self.finetuning_status_}-{self.examplar_status_}.json"
     
     def generate_responses_file(self) -> str:
-        return f"{self.path}{self.model}-{self.examplar_status_}-responses.json"
+        return f"{self.results_path}{self.model}-{self.examplar_status_}-responses.json"
     
     def generate_results_file(self) -> str:
-        return f"{self.path}{self.model}-{self.examplar_status_}-results.json"
+        return f"{self.results_path}{self.model}-{self.examplar_status_}-results.json"
+    
+    def generate_processed_targets_file(self) -> str:
+        return f"{self.data_path}{self.finetuning_status_}-{self.examplar_status_}-targets.json"
 
     def _set_t5_tokenizer(self):
         if "flan-t5-small" in self.model:
-            tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-small")
+            tokenizer_id = "google/flan-t5-small"
+            logger.info(
+                "Loading tokenizer {tokenizer} with max length of {max_length}",
+                tokenizer=tokenizer_id,
+                max_length=self.max_length
+                )
+            tokenizer = T5Tokenizer.from_pretrained(tokenizer_id, model_max_length=self.max_length)
         elif "t5-small" in self.model:
-            tokenizer = T5Tokenizer.from_pretrained("t5-small")
+            tokenizer_id = "t5-small"
+            logger.info(
+                "Loading tokenizer {tokenizer} with max length of {max_length}",
+                tokenizer=tokenizer_id,
+                max_length=self.max_length
+                )
+            tokenizer = T5Tokenizer.from_pretrained("t5-small", model_max_length=self.max_length)
         else:
             raise ValueError("Model not found.")
         # from tokenizers import AddedToken
         # tokenizer.add_tokens(AddedToken("\n", normalized=False))  # self-ask uses newline breaks
         self.tokenizer_ = tokenizer
-        self.tokenizer_config_ = {"max_length": self.max_length, "truncation": True, "return_tensors": "pt", "padding": "longest"}
+        self.tokenizer_config_ = {"truncation": True, "return_tensors": "pt", "padding": "longest"}
 
 
 def load_model(config: EvaluationConfig) -> Any:
     '''Loads a model object.'''
     model = config.model
+    max_length = config.max_length
     if model == 'flan-t5-small-self-ask':
         t5_model = TFT5ForConditionalGeneration.from_pretrained("google/flan-t5-small")
-        keras_model = build_t5_training_wrapper_model(t5_model, max_length=300)
+        keras_model = build_t5_training_wrapper_model(t5_model, max_length=max_length)
         path = f"models/{model}.h5"
+        logger.info("Loading finetuned model weights from: {path}", path=path)
         keras_model.load_weights(path)
         return t5_model
     if model == 'flan-t5-small-direct':
         t5_model = TFT5ForConditionalGeneration.from_pretrained("google/flan-t5-small")
-        keras_model = build_t5_training_wrapper_model(t5_model, max_length=300)
+        keras_model = build_t5_training_wrapper_model(t5_model, max_length=max_length)
         path = f"models/{model}.h5"
+        logger.info("Loading finetuned model weights from: {path}", path=path)
         keras_model.load_weights(path)
         return t5_model
     if model == 't5-small-self-ask':
         t5_model = TFT5ForConditionalGeneration.from_pretrained("t5-small")
-        keras_model = build_t5_training_wrapper_model(t5_model, max_length=300)
+        keras_model = build_t5_training_wrapper_model(t5_model, max_length=max_length)
         path = f"models/{model}.h5"
+        logger.info("Loading finetuned model weights from: {path}", path=path)
         keras_model.load_weights(path)
         return t5_model
     if model == 't5-small-direct':
         t5_model = TFT5ForConditionalGeneration.from_pretrained("t5-small")
-        keras_model = build_t5_training_wrapper_model(t5_model, max_length=300)
+        keras_model = build_t5_training_wrapper_model(t5_model, max_length=max_length)
         path = f"models/{model}.h5"
+        logger.info("Loading finetuned model weights from: {path}", path=path)
         keras_model.load_weights(path)
         return t5_model
     elif model == 'flan-t5-small':
         path = "google/flan-t5-small"
+        logger.info("Loading raw model from: {path}", path=path)
         return TFT5ForConditionalGeneration.from_pretrained(path)
     elif model == 't5-small':
         path = "t5-small"
+        logger.info("Loading raw model from: {path}", path=path)
         return TFT5ForConditionalGeneration.from_pretrained(path)
     elif model == 'opt-small-self-ask':
         pass # TODO: implement
@@ -254,10 +277,14 @@ def check_self_ask(generated_text: str) -> bool:
         return False
 
 
-def clear_responses_file(config: EvaluationConfig):
-    file = config.generate_responses_file()
-    with open(file, 'w') as f:
+def clear_responses_file(config: EvaluationConfig, load_checkpoint: bool):
+    if load_checkpoint:
+        # continuing progress, do not clear the file
         pass
+    else:
+        file = config.generate_responses_file()
+        with open(file, 'w') as f:
+            pass
 
 
 def store_responses(responses: List[Dict[str, Any]], config: EvaluationConfig) -> None:
@@ -398,6 +425,48 @@ def store_evaluation_results(results: Dict, config: EvaluationConfig) -> None:
         json.dump(results, f)
 
 
+def save_progress(config: EvaluationConfig, responses, answers_encoded_decoded, targets_encoded_decoded) -> None:
+    store_responses(responses, config)
+    store_processed_targets(config, answers_encoded_decoded, targets_encoded_decoded)  # save progress
+
+
+def load_progress(config: EvaluationConfig) -> Tuple[int, List[str], List[str]]:
+    # check if responses exist
+    try:
+        responses = load_responses(config)
+    except:
+        responses = []
+    if len(responses) > 0:
+        start_idx = len(responses)
+        logger.info("Continuing from evaluation checkpoint... starting at example {idx}", idx=start_idx)
+        processed_targets = load_processed_targets(config)
+        assert len(processed_targets["answers"]) == start_idx, \
+        "Misalignment: number of processed targets does not match number of processed responses"
+        return start_idx, processed_targets["answers"], processed_targets["targets"]
+    else:
+        logger.info("No existing progress detected... starting from scratch.")
+        return 0, [], []
+
+
+def load_processed_targets(config: EvaluationConfig) -> Dict[str, List[str]]:
+    file = config.generate_processed_targets_file()
+    try:
+        with open(file, "r") as f:
+            targets = json.load(f)
+        return targets
+    except:
+        return {"answers": [], "targets": []}
+
+
+def store_processed_targets(config: EvaluationConfig, answers: List[str], targets: List[str]) -> None:
+    file = config.generate_processed_targets_file()
+    data = {}
+    data["answers"] = answers
+    data["targets"] = targets
+    with open(file, 'w') as f:
+        json.dump(data, f)
+
+
 if __name__ == "__main__":
     # clear contents of log file
     with open("logs/evaluation.log", "w") as f:
@@ -417,12 +486,15 @@ if __name__ == "__main__":
         'opt-small-direct',
         'opt-small'
         ]
-    path = "data/MultihopEvaluation/"
+    datapath = "data/MultihopEvaluation/"
+    resultspath = "results/"
 
     # Stage 0: Setup
     parser = argparse.ArgumentParser(description='Run llm QA evaluation.')
     parser.add_argument('--model', help=f'Language model id, one of {model_options}', type=str)
-    parser.add_argument('--examplars', help='Whether to include self-ask examplars in test prompt', type=bool)
+    # parser.add_argument('--examplars', help='Whether to include self-ask examplars in test prompt', type=bool)
+    parser.add_argument('--examplars', help='Whether to include self-ask examplars in test prompt', action=argparse.BooleanOptionalAction)
+    parser.add_argument('--load_checkpoint', help='Whether to continue from saved progress', action=argparse.BooleanOptionalAction)
     parser.add_argument('--max_length', default=300, help='Max token length for tokenization', type=int)
     parser.add_argument('--size', help='Size of dataset to evaluate on, pass -1 for full dataset', type=int)
     parser.add_argument('--batch_size', default=100, help='Batch size', type=int)
@@ -435,10 +507,21 @@ if __name__ == "__main__":
     MODEL = args.model
     MAX_LENGTH = args.max_length
     EXAMPLARS = args.examplars
+    LOAD_CHECKPOINT = args.load_checkpoint
+    if EXAMPLARS is None:
+        EXAMPLARS = False
+    if LOAD_CHECKPOINT is None:
+        LOAD_CHECKPOINT = False
+    logger.debug("Examplars parameter -> {examplars}", examplars=EXAMPLARS)
+    logger.debug("Checkpoint loader parameter -> {checkpoint}", checkpoint=LOAD_CHECKPOINT)
     assert isinstance(EXAMPLARS, bool), "EXAMPLARS must be a boolean"
     BATCH_SIZE = args.batch_size
 
-    config = EvaluationConfig(model=MODEL, examplars=EXAMPLARS, path=path, max_length=MAX_LENGTH)
+
+    config = EvaluationConfig(model=MODEL, examplars=EXAMPLARS, data_path=datapath, results_path=resultspath, max_length=MAX_LENGTH)
+    logger.info("Test set pointing to file: {path}", path=config.generate_test_set_file())
+    logger.info("Responses will be saved to: {path}", path=config.generate_responses_file())
+    logger.info("Results will be saved to: {path}", path=config.generate_results_file())
     if args.size == -1:
         # full size
         test_set = load_TestData(file=config.generate_test_set_file(), n_examples=-1)
@@ -447,31 +530,30 @@ if __name__ == "__main__":
     else:
         SIZE = args.size
 
-    clear_responses_file(config)
+    clear_responses_file(config, LOAD_CHECKPOINT)
 
     # Stage 1: Collect responses
     logger.info("Loading {model} model", model=MODEL)
     model = load_model(config)
 
-    answers_encoded_decoded = []
-    targets_encoded_decoded = []
+    START, answers_encoded_decoded, targets_encoded_decoded = load_progress(config)
     
     logger.info("Collecting model responses...")
-    for idx in tqdm(range(0, SIZE, BATCH_SIZE)):
+    for idx in tqdm(range(START, SIZE, BATCH_SIZE)):
         # load batch and process questions
         start_idx = idx
         end_idx = min(idx + BATCH_SIZE, SIZE)
         batch = load_batch(config, (start_idx, end_idx))
         questions, targets, answers = qa_split(batch, triple=True)
-        questions = preprocess_questions(questions, config)
+        # questions = preprocess_questions(questions, config)
         question_encodings = tokenize(questions, config)
 
         # pass answers and targets through tokenizer
         # to normalize text with model responses (fair comparison)
         answer_encodings = tokenize(answers, config)
         target_encodings = tokenize(targets, config)
-        answers_encoded_decoded += decode(answer_encodings, config)
-        targets_encoded_decoded += decode(target_encodings, config)
+        answers_encoded_decoded += decode(answer_encodings.input_ids, config)
+        targets_encoded_decoded += decode(target_encodings.input_ids, config)
 
         # ask questions and store responses
         responses = []
@@ -482,7 +564,7 @@ if __name__ == "__main__":
             self_ask = check_self_ask(response)
             responses.append({'response': response, 'answer': answer, 'self_ask': self_ask})
         
-        store_responses(responses, config)
+        save_progress(config, responses, answers_encoded_decoded, targets_encoded_decoded)
         del batch, questions, question_encodings, responses, text_responses, tokenized_responses
         del answer_encodings, target_encodings
     del model
