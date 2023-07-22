@@ -86,25 +86,22 @@ def load_FinetuningData(n_examples: int = -1, split: str = "train", strategy: st
     return data
 
 
-def load_TestData(n_examples: int = -1, strategy: str = "direct") -> List[Dict]:
+def load_TestData(file: str, n_examples: int = -1) -> List[Dict]:
     '''Loads the restructured version of the 2WikiMultihopQA test dataset for evaluation.
 
     Parameters
     ----------
+    file : path to the json file
     n_examples (optional) : filter for first n_examples, -1 means load all examples, 
         defaults to -1
-    strategy : specify prompting strategy, possible values are
-        - "direct": directly prompt the model with the question
-        - "self_ask": prompt augmented with self-ask rationale examplars
 
     Returns
     -------
     List of examples of format:
     {"prompt": ..., "target": ..., "answer": ...}
     '''
-    path = 'data/MultihopEvaluation/'
     # load json file into dictionary
-    with open(os.path.join(path, f'{strategy.replace("-", "_")}_test.json'), 'r') as f:
+    with open(file, 'r') as f:
         data = json.load(f)
     # load the first n_examples
     if n_examples > 0:
