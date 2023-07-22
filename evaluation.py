@@ -45,14 +45,14 @@ Stage 2: Assess responses
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from typing import Any, Dict, List, Tuple, Iterable
-from training_utils import qa_split
+from training_utils import qa_split, build_t5_training_wrapper_model
 import json
 from data_loaders import load_TestData
 from tqdm import tqdm
 from thefuzz import fuzz
 import argparse
 from nltk.translate.bleu_score import sentence_bleu
-from rouge_score import rouge_scorer
+from rouge_score.rouge_scorer import RougeScorer
 from transformers import TFT5ForConditionalGeneration, T5Tokenizer
 from loguru import logger
 
@@ -76,8 +76,8 @@ class EvaluationConfig(object):
             tokenizer = T5Tokenizer.from_pretrained("t5-small")
         else:
             raise ValueError("Model not found.")
-        from tokenizers import AddedToken
-        tokenizer.add_tokens(AddedToken("\n", normalized=False))  # self-ask uses newline breaks
+        # from tokenizers import AddedToken
+        # tokenizer.add_tokens(AddedToken("\n", normalized=False))  # self-ask uses newline breaks
         self.tokenizer_ = tokenizer
         max_length = 300
         self.tokenizer_config_ = {"max_length": max_length, "truncation": True, "return_tensors": "pt", "padding": "longest"}
@@ -87,22 +87,34 @@ def load_model(config: EvaluationConfig) -> Any:
     '''Loads a model object.'''
     model = config.model
     if model == 'flan-t5-small-self-ask':
+        t5_model = TFT5ForConditionalGeneration.from_pretrained("google/flan-t5-small")
+        keras_model = build_t5_training_wrapper_model(t5_model, max_length=300)
         path = f"models/{model}.h5"
-        return TFT5ForConditionalGeneration.from_pretrained(path)
+        keras_model.load_weights(path)
+        return t5_model
     if model == 'flan-t5-small-direct':
+        t5_model = TFT5ForConditionalGeneration.from_pretrained("google/flan-t5-small")
+        keras_model = build_t5_training_wrapper_model(t5_model, max_length=300)
         path = f"models/{model}.h5"
-        return TFT5ForConditionalGeneration.from_pretrained(path)
+        keras_model.load_weights(path)
+        return t5_model
     if model == 't5-small-self-ask':
+        t5_model = TFT5ForConditionalGeneration.from_pretrained("t5-small")
+        keras_model = build_t5_training_wrapper_model(t5_model, max_length=300)
         path = f"models/{model}.h5"
-        return TFT5ForConditionalGeneration.from_pretrained(path)
+        keras_model.load_weights(path)
+        return t5_model
     if model == 't5-small-direct':
+        t5_model = TFT5ForConditionalGeneration.from_pretrained("t5-small")
+        keras_model = build_t5_training_wrapper_model(t5_model, max_length=300)
         path = f"models/{model}.h5"
+        keras_model.load_weights(path)
+        return t5_model
+    elif model == 'flan-t5-small':
+        path = "google/flan-t5-small"
         return TFT5ForConditionalGeneration.from_pretrained(path)
     elif model == 't5-small':
         path = "t5-small"
-        return TFT5ForConditionalGeneration.from_pretrained(path)
-    elif model == 'flan-t5-small':
-        path = "google/flan-t5-small"
         return TFT5ForConditionalGeneration.from_pretrained(path)
     elif model == 'opt-small-self-ask':
         pass # TODO: implement
@@ -159,7 +171,8 @@ def ask_questions(lm, questions, config: EvaluationConfig) -> Any:
     tokenized answer returned by model
     '''
     if "t5" in config.model:
-        return lm.generate(questions.input_ids)
+        # max number of tokens in target text of test set is 170
+        return lm.generate(questions.input_ids, max_length=200)
     pass
 
 
@@ -168,7 +181,7 @@ def decode(tokens: Iterable, config: EvaluationConfig) -> Iterable[str]:
     model = config.model
     tokenizer = config.tokenizer_
     if "t5" in model:
-        return tokenizer.batch_decode(tokens, skip_special_tokens=True)
+        return tokenizer.batch_decode(tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)
     pass
 
 
@@ -273,8 +286,6 @@ def compute_micro_results(test_examples, responses) -> Dict[str, Any]:
     Returns a dictionary with the following keys:
     {
         'correct': [0, 1, 1, ...], 
-        'bleu-1': [0.##, 0.##, 0.##, ...],
-        'bleu-2': [0.##, 0.##, 0.##, ...],
         'rouge-1': [0.##, 0.##, 0.##, ...],
         'rouge-2': [0.##, 0.##, 0.##, ...], 
         'F1-1': [0.##, 0.##, 0.##, ...],
@@ -286,19 +297,21 @@ def compute_micro_results(test_examples, responses) -> Dict[str, Any]:
     bleu2_metrics = []
     rouge1_metrics = []
     rouge2_metrics = []
+    rougeL_metrics = []
     f1_1_metrics = []
     f1_2_metrics = []
-    rouge = rouge_scorer(["rouge1", "rouge2"], use_stemmer=True)
+    rouge = RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=True)
     for idx, (test_example, response) in tqdm(enumerate(zip(test_examples, responses))):
-        true_answer = test_example['answer'].lower()
-        reference_text = test_example['target'].lower()
+        true_answer = test_example['answer']
+        reference_text = test_example['target']
 
-        generated_answer = response['answer'].lower()
-        generated_response = response['response'].lower()
+        generated_answer = response['answer']
+        generated_response = response['response']
 
-        rouge_scores = rouge.score(set(reference_text.split(" ")), set(generated_response.split(" ")))
+        rouge_scores = rouge.score(reference_text, generated_response)
         rouge1_metrics.append(rouge_scores["rouge1"].recall)
         rouge2_metrics.append(rouge_scores["rouge2"].recall)
+        rougeL_metrics.append(rouge_scores["rougeL"].recall)
         bleu1_metrics.append(rouge_scores["rouge1"].precision)
         bleu2_metrics.append(rouge_scores["rouge2"].precision)
         f1_1_metrics.append(rouge_scores["rouge1"].fmeasure)
@@ -311,6 +324,7 @@ def compute_micro_results(test_examples, responses) -> Dict[str, Any]:
         'bleu-2': bleu2_metrics,
         'rouge-1': rouge1_metrics, 
         'rouge-2': rouge2_metrics,
+        'rouge-L': rougeL_metrics,
         'F1-1': f1_1_metrics,
         'F1-2': f1_2_metrics
     }
@@ -335,6 +349,7 @@ def compute_macro_results(micro_results: Dict[str, Any]) -> Dict[str, Any]:
     bleu2_metrics = micro_results['bleu-2']
     rouge1_metrics = micro_results['rouge-1']
     rouge2_metrics = micro_results['rouge-2']
+    rougeL_metrics = micro_results['rouge-L']
     f1_1_metrics = micro_results['F1-1']
     f1_2_metrics = micro_results['F1-2']
     accuracy = round(sum(correct_metrics) / len(correct_metrics), 4)
@@ -342,6 +357,7 @@ def compute_macro_results(micro_results: Dict[str, Any]) -> Dict[str, Any]:
     bleu2 = round(sum(bleu2_metrics) / len(bleu2_metrics), 4)
     rouge1 = round(sum(rouge1_metrics) / len(rouge1_metrics), 4)
     rouge2 = round(sum(rouge2_metrics) / len(rouge2_metrics), 4)
+    rougeL = round(sum(rougeL_metrics) / len(rougeL_metrics), 4)
     f1_1 = round(sum(f1_1_metrics) / len(f1_1_metrics), 4)
     f1_2 = round(sum(f1_2_metrics) / len(f1_2_metrics), 4)
     return {
@@ -351,7 +367,8 @@ def compute_macro_results(micro_results: Dict[str, Any]) -> Dict[str, Any]:
         'bleu-1': bleu1,
         'bleu-2': bleu2,
         'rouge-1': rouge1,
-        'rouge-2': rouge2
+        'rouge-2': rouge2,
+        'rouge-L': rougeL
     }
 
 
