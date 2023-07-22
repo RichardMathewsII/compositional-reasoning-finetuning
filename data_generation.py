@@ -47,11 +47,16 @@ def generate_test_data(sample_size: int = -1) -> None:
 
     test_examples = wiki_adaptor.generate_evaluation_examples(data, self_ask_examplars)
 
-    self_ask_examples = []
-    direct_examples = []
-    squad_examples = []
+    # create test files
+    # Format: '<finetuning-status>-<examplar-status>.json'
+    self_ask_examplars_examples = []
+    self_ask_no_examplars_examples = []
+    # direct_examplars_examples is the same as self_ask_examplars_examples
+    direct_no_examplars_examples = []
+    baseline_examplars_examples = []
+    baseline_no_examplars_examples = []
     for example in test_examples:
-        self_ask_examples.append({
+        self_ask_examplars_examples.append({
             "prompt": example["self_ask_prompt_with_examplars"],
             "target": example["self_ask_answer"],
             "answer": example["answer"],
@@ -59,7 +64,15 @@ def generate_test_data(sample_size: int = -1) -> None:
             "num_target_tokens": example["self_ask_target_tokens"],
             "num_tokens": example["self_ask_tokens"]
         })
-        direct_examples.append({
+        self_ask_no_examplars_examples.append({
+            "prompt": example["self_ask_prompt_without_examplars"],
+            "target": example["self_ask_answer"],
+            "answer": example["answer"],
+            "num_prompt_tokens": example["self_ask_prompt_without_examplars_tokens"],
+            "num_target_tokens": example["self_ask_target_tokens"],
+            "num_tokens": example["self_ask_without_examplars_tokens"]
+        })
+        direct_no_examplars_examples.append({
             "prompt": example["direct_prompt"],
             "target": example["answer"],
             "answer": example["answer"],
@@ -67,7 +80,7 @@ def generate_test_data(sample_size: int = -1) -> None:
             "num_target_tokens": example["direct_target_tokens"],
             "num_tokens": example["direct_tokens"]
         })
-        squad_examples.append({
+        baseline_no_examplars_examples.append({
             "prompt": example["squad_prompt"],
             "target": example["answer"],
             "answer": example["answer"],
@@ -75,17 +88,25 @@ def generate_test_data(sample_size: int = -1) -> None:
             "num_target_tokens": example["squad_target_tokens"],
             "num_tokens": example["squad_tokens"]
         })
+        baseline_examplars_examples.append({
+            "prompt": example["squad_prompt_with_examplars"],
+            "target": example["self_ask_answer"],
+            "answer": example["answer"],
+            "num_prompt_tokens": example["squad_prompt_with_examplars_tokens"],
+            "num_target_tokens": example["squad_target_tokens"],
+            "num_tokens": example["squad_with_examplars_tokens"]
+        })
     
-    with open("data/MultihopEvaluation/self_ask_test.json", "w") as f:
-        json.dump(self_ask_examples, f)
-    with open("data/MultihopEvaluation/direct_test.json", "w") as f:
-        json.dump(direct_examples, f)
-    with open("data/MultihopEvaluation/squad_test.json", "w") as f:
-        json.dump(squad_examples, f)
-    del test_examples
-    del self_ask_examples
-    del direct_examples
-    del squad_examples
+    with open("data/MultihopEvaluation/self-ask-with-examplars.json", "w") as f:
+        json.dump(self_ask_examplars_examples, f)
+    with open("data/MultihopEvaluation/self-ask-without-examplars.json", "w") as f:
+        json.dump(self_ask_no_examplars_examples, f)
+    with open("data/MultihopEvaluation/direct-without-examplars.json", "w") as f:
+        json.dump(direct_no_examplars_examples, f)
+    with open("data/MultihopEvaluation/baseline-with-examplars.json", "w") as f:
+        json.dump(baseline_examplars_examples, f)
+    with open("data/MultihopEvaluation/baseline-without-examplars.json", "w") as f:
+        json.dump(baseline_no_examplars_examples, f)
 
 
 def generate_finetuning_data(

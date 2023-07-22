@@ -97,39 +97,64 @@ class DataAdaptor:
     def generate_evaluation_examples(self, examples: List[Dict[str, Any]], examplars: List[str] = []) -> List[Dict[str, str]]:
         if self.dataset == "2WikiMultihopQA":
             self_ask_examples = self.generate_training_examples(examples, strategy="self-ask", examplars=examplars)
+            self_ask_examples_without_examplars = self.generate_training_examples(examples, strategy="self-ask")
             direct_examples = self.generate_training_examples(examples, strategy="direct")
             squad_examples = self.generate_training_examples(examples, strategy="squad")
+            squad_examples_with_examplars = self.generate_training_examples(examples, strategy="squad", examplars=examplars)
             evaluation_examples = []
             for self_ask_example, direct_example, squad_example in zip(self_ask_examples, direct_examples, squad_examples):
+                # prompts
                 self_ask_prompt = self_ask_example["prompt"]
+                self_ask_prompt_without_examplars = self_ask_examples_without_examplars["prompt"]
+                direct_prompt = direct_example["prompt"]
+                squad_prompt = squad_example["prompt"]
+                squad_prompt_with_examplars = squad_examples_with_examplars["prompt"]
+
+                # targets
                 self_ask_target = self_ask_example["target"]
+                direct_target = direct_example["target"]
+
+                # token counts
                 self_ask_target_tokens = self_ask_example["num_target_tokens"]
                 self_ask_prompt_tokens = self_ask_example["num_prompt_tokens"]
                 self_ask_tokens = self_ask_example["num_tokens"]
-                direct_prompt = direct_example["prompt"]
-                direct_target = direct_example["target"]
+                self_ask_prompt_without_examplars_tokens = self_ask_examples_without_examplars["num_prompt_tokens"]
+                self_ask_without_examplars_tokens = self_ask_examples_without_examplars["num_tokens"]
                 direct_target_tokens = direct_example["num_target_tokens"]
                 direct_prompt_tokens = direct_example["num_prompt_tokens"]
                 direct_tokens = direct_example["num_tokens"]
-                squad_prompt = squad_example["prompt"]
                 squad_target_tokens = squad_example["num_target_tokens"]
+                squad_prompt_with_examplars_tokens = squad_examples_with_examplars["num_prompt_tokens"]
                 squad_prompt_tokens = squad_example["num_prompt_tokens"]
                 squad_tokens = squad_example["num_tokens"]
+                squad_with_examplars_tokens = squad_examples_with_examplars["num_tokens"]
+
                 evaluation_examples.append({
-                    "self_ask_prompt_with_examplars": self_ask_prompt,
-                    "self_ask_answer": self_ask_target,
+                    # prompts
                     "direct_prompt": direct_prompt,
                     "squad_prompt": squad_prompt,
+                    "self_ask_prompt_with_examplars": self_ask_prompt,
+                    "self_ask_prompt_without_examplars": self_ask_prompt_without_examplars,
+                    "squad_prompt_with_examplars": squad_prompt_with_examplars,
+
+                    # targets
+                    "self_ask_answer": self_ask_target,
                     "answer": direct_target,
+
+                    # token counts
                     "self_ask_target_tokens": self_ask_target_tokens,
                     "self_ask_prompt_tokens": self_ask_prompt_tokens,
+                    "self_ask_prompt_without_examplars_tokens": self_ask_prompt_without_examplars_tokens,
                     "self_ask_tokens": self_ask_tokens,
+                    "self_ask_without_examplars_tokens": self_ask_without_examplars_tokens,
                     "direct_target_tokens": direct_target_tokens,
                     "direct_prompt_tokens": direct_prompt_tokens,
                     "direct_tokens": direct_tokens,
                     "squad_target_tokens": squad_target_tokens,
                     "squad_prompt_tokens": squad_prompt_tokens,
-                    "squad_tokens": squad_tokens
+                    "squad_prompt_with_examplars_tokens": squad_prompt_with_examplars_tokens,
+                    "squad_tokens": squad_tokens,
+                    "squad_with_examplars_tokens": squad_with_examplars_tokens
                     })
             del self_ask_examples
             del direct_examples
