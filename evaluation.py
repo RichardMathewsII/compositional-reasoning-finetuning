@@ -59,8 +59,9 @@ from data_loaders import load_TestData
 from tqdm import tqdm
 import argparse
 from rouge_score.rouge_scorer import RougeScorer
-from transformers import TFT5ForConditionalGeneration, T5Tokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, TFT5ForConditionalGeneration, T5Tokenizer
 from loguru import logger
+from peft import PeftModel, PeftConfig
 
 @dataclass
 class EvaluationConfig(object):
@@ -76,6 +77,8 @@ class EvaluationConfig(object):
         if self.create_tokenizer:
             if "t5" in self.model:
                 self._set_t5_tokenizer()
+            elif "opt"  in self.model:
+                self._set_opt_tokenizer()
         # set examplar status
         if self.examplars:
             self.examplar_status_ = "with-examplars"
@@ -129,6 +132,22 @@ class EvaluationConfig(object):
         self.tokenizer_ = tokenizer
         self.tokenizer_config_ = {"truncation": True, "return_tensors": "pt", "padding": "longest"}
 
+    def _set_opt_tokenizer(self):
+        if self.model == 'opt-125m':
+            peft_model_id = f"facebook/{model}"
+        else:
+            peft_model_id = f"adam-wein/{self.model}"
+        config = PeftConfig.from_pretrained(peft_model_id)
+        tokenizer = AutoTokenizer.from_pretrained(config.base_model_name_or_path, model_max_length=self.max_length, padding_side="left")
+        logger.info(
+            "Loading tokenizer {tokenizer} with max length of {max_length}",
+            tokenizer=config.base_model_name_or_path,
+            max_length=self.max_length
+            )
+        print('tokenizer')
+        self.tokenizer_ = tokenizer
+        self.tokenizer_config_ = {"truncation": True, "return_tensors": "pt", "padding": "longest"}
+
 
 def load_model(config: EvaluationConfig) -> Any:
     '''Loads a model object.'''
@@ -170,12 +189,24 @@ def load_model(config: EvaluationConfig) -> Any:
         path = "t5-small"
         logger.info("Loading raw model from: {path}", path=path)
         return TFT5ForConditionalGeneration.from_pretrained(path)
-    elif model == 'opt-small-self-ask':
-        pass # TODO: implement
-    elif model == 'opt-small-direct':
-        pass # TODO: implement
-    elif model == 'opt-small':
-        pass # TODO: implement
+    elif model == 'opt-125m-self-ask':
+        peft_model_id = f"adam-wein/{model}"
+        logger.info("Loading finetuned model from: {path}", path=peft_model_id)
+        config = PeftConfig.from_pretrained(peft_model_id)
+        return AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
+            return_dict=True, load_in_8bit=True, device_map='auto', max_length=max_length)
+    elif model == 'opt-125m-direct':
+        peft_model_id = f"adam-wein/{model}"
+        logger.info("Loading finetuned model from: {path}", path=peft_model_id)
+        config = PeftConfig.from_pretrained(peft_model_id)
+        return AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
+            return_dict=True, load_in_8bit=True, device_map='auto', max_length=max_length)
+    elif model == 'opt-125m':
+        peft_model_id = f"facebook/{model}"
+        logger.info("Loading raw model from: {path}", path=peft_model_id)
+        config = PeftConfig.from_pretrained(peft_model_id)
+        return AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
+            return_dict=True, load_in_8bit=True, device_map='auto', max_length=max_length)
     else:
         raise ValueError("Model not found.")
 
@@ -186,6 +217,7 @@ def load_batch(config: EvaluationConfig, idx_range: Tuple[int, int]) -> List[Dic
     data = load_TestData(file=file, n_examples=-1)
     batch = data[idx_range[0]:idx_range[1]]
     del data
+    # logger.info(f"Loading batch {batch[0]}...")
     return batch
 
 
@@ -199,8 +231,11 @@ def tokenize(text: Iterable[str], config: EvaluationConfig) -> Any:
     model = config.model
     tokenizer = config.tokenizer_
     tokenizer_config = config.tokenizer_config_
+    # logger.info(f"Tokenizing {text[:5]}...")
     # make sure set_tokenizer has been executed
     if "t5" in model:
+        return tokenizer(text, **tokenizer_config)
+    elif "opt"  in model:
         return tokenizer(text, **tokenizer_config)
     else:
         raise ValueError("Model not found.")
@@ -222,16 +257,20 @@ def ask_questions(lm, questions, config: EvaluationConfig) -> Any:
     if "t5" in config.model:
         # max number of tokens in target text of test set is 170
         return lm.generate(questions.input_ids, max_length=200)
-    pass
+    elif "opt" in config.model:
+        # max number of tokens in target text of test set is 170
+        return lm.generate(questions.input_ids, max_length=200)
 
 
 def decode(tokens: Iterable, config: EvaluationConfig) -> Iterable[str]:
     '''Decodes one or more tokenized strings.'''
     model = config.model
     tokenizer = config.tokenizer_
+    # logger.info(f"Decoding {tokens[:5]}...")
     if "t5" in model:
         return tokenizer.batch_decode(tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-    pass
+    elif "opt" in model:
+        return tokenizer.batch_decode(tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)
 
 
 def extract_answer(generated_text: str) -> str:
@@ -421,6 +460,7 @@ def compute_macro_results(micro_results: Dict[str, Any]) -> Dict[str, Any]:
 def store_evaluation_results(results: Dict, config: EvaluationConfig) -> None:
     '''Stores evaluation results in a json file.'''
     file = config.generate_results_file()
+    logger.info(f"Storing evaluation results at {file}")
     with open(file, 'w') as f:
         json.dump(results, f)
 
@@ -482,9 +522,9 @@ if __name__ == "__main__":
         't5-small',
         't5-small-self-ask',
         't5-small-direct',
-        'opt-small-self-ask',
-        'opt-small-direct',
-        'opt-small'
+        'opt-125m-self-ask',
+        'opt-125m-direct',
+        'opt-125m'
         ]
     datapath = "data/MultihopEvaluation/"
     resultspath = "results/"
@@ -536,7 +576,7 @@ if __name__ == "__main__":
     logger.info("Loading {model} model", model=MODEL)
     model = load_model(config)
 
-    START, answers_encoded_decoded, targets_encoded_decoded = load_progress(config)
+    START, answers_encoded_decoded, targets_encoded_decoded = load_progress(config) # maybe TODO
     
     logger.info("Collecting model responses...")
     for idx in tqdm(range(START, SIZE, BATCH_SIZE)):
