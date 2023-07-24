@@ -134,19 +134,20 @@ class EvaluationConfig(object):
 
     def _set_opt_tokenizer(self):
         if self.model == 'opt-125m':
-            peft_model_id = f"facebook/{model}"
+            base_model_name_or_path = f"facebook/{self.model}"
         else:
-            peft_model_id = f"adam-wein/{self.model}"
-        config = PeftConfig.from_pretrained(peft_model_id)
-        tokenizer = AutoTokenizer.from_pretrained(config.base_model_name_or_path, model_max_length=self.max_length, padding_side="left")
+            base_model_name_or_path = f"adam-wein/{self.model}"
+            config = PeftConfig.from_pretrained(peft_model_id)
+            base_model_name_or_path = config.base_model_name_or_path
+        tokenizer = AutoTokenizer.from_pretrained(base_model_name_or_path, model_max_length=self.max_length, padding_side="left")
         logger.info(
             "Loading tokenizer {tokenizer} with max length of {max_length}",
-            tokenizer=config.base_model_name_or_path,
+            tokenizer=base_model_name_or_path,
             max_length=self.max_length
             )
         print('tokenizer')
         self.tokenizer_ = tokenizer
-        self.tokenizer_config_ = {"truncation": True, "return_tensors": "pt", "padding": "longest"}
+        self.tokenizer_config_ = {"truncation": True, "return_tensors": "pt", "padding": "max_length"}
 
 
 def load_model(config: EvaluationConfig) -> Any:
@@ -202,10 +203,9 @@ def load_model(config: EvaluationConfig) -> Any:
         return AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
             return_dict=True, load_in_8bit=True, device_map='auto', max_length=max_length)
     elif model == 'opt-125m':
-        peft_model_id = f"facebook/{model}"
-        logger.info("Loading raw model from: {path}", path=peft_model_id)
-        config = PeftConfig.from_pretrained(peft_model_id)
-        return AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
+        base_model_name_or_path = f"facebook/{model}"
+        logger.info("Loading raw model from: {path}", path=base_model_name_or_path)
+        return AutoModelForCausalLM.from_pretrained(base_model_name_or_path, 
             return_dict=True, load_in_8bit=True, device_map='auto', max_length=max_length)
     else:
         raise ValueError("Model not found.")
