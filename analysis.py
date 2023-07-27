@@ -38,6 +38,28 @@ def load_results(model: str = None, finetuning: str = None, examplars: bool = No
     return df
 
 
+def load_responses(model: str = None, finetuning: str = None, examplars: bool = None) -> pd.DataFrame:
+    '''Loads model responses
+
+    Parameters
+    ----------
+    model : model name, e.g. 'flan-t5-small'
+    finetuning : finetuning status, e.g. 'self-ask'
+    examplars : whether the model was given self-ask examplars during testing
+
+    Returns
+    -------
+    Model responses in dataframe
+    '''    
+    if finetuning is None:
+        file = f"results/{model}-{'with' if examplars else 'without'}-examplars-responses.json"
+    else:
+        file = f"results/{model}-{finetuning}-{'with' if examplars else 'without'}-examplars-responses.json"
+    with open(file, 'r') as f:
+        responses = json.load(f)
+    return pd.DataFrame(responses)
+
+
 def _load_macro_results() -> pd.DataFrame:
 
     path_to_json = './results'
