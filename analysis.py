@@ -133,7 +133,11 @@ def correlate_context_size(df: pd.DataFrame, prompt_or_token: str = "") -> float
     elif prompt_or_token == "target":
         return df.corr().loc["num_target_tokens", metrics]
 
+
 def write_selected_responses_to_file(responses, file_name):
+    # Takes a response data frame and writes the results to a file
+    # The file name should align with the other responses and results file name for the same model
+    
     top_five = responses.sort_values(by='F1-2', ascending=False).head(5)
     bottom_five = responses.sort_values(by='F1-2', ascending=False).tail(5)
     random_five = responses.sample(5, random_state=0)
