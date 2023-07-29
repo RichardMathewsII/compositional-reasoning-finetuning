@@ -86,14 +86,14 @@ def _load_macro_results() -> pd.DataFrame:
 
     path_to_json = './results'
 
-    json_files = [pos_json for pos_json in sorted(os.listdir(path_to_json)) if pos_json.endswith('.json')]
+    json_files = [pos_json for pos_json in sorted(os.listdir(path_to_json)) if pos_json.endswith('results.json')]
 
     jsons_data = pd.DataFrame(columns=['Model', 'Finetune', 'With Examplars', 'Accuracy', 'F1-1', 'F1-2', 'BLEU-1', 'BLEU-2', 'ROUGE-1', 'ROUGE-2', 'ROUGE-L'])
 
     for index, js in enumerate(json_files):
         with open(os.path.join(path_to_json, js)) as json_file:
             json_text = json.load(json_file)
-
+            
             # Get rid of unnecessary filename and extension.
             js = js.replace("-results.json", "")
             
@@ -145,11 +145,15 @@ def plot_context_size_distributions(df: pd.DataFrame, title: str = ""):
     plt.show()
 
 
-def correlate_context_size(df: pd.DataFrame) -> float:
+def correlate_context_size(df: pd.DataFrame, prompt_or_token: str = "") -> float:
     # df is the micro_results dataframe with the number of prompt tokens
     # compute the correlation between the number of prompt tokens and each metrics
     # return the correlation coefficient
     metrics = ['correct', 'bleu-1', 'bleu-2', 'rouge-1', 'rouge-2', 'rouge-L', 'F1-1', 'F1-2']
+    if prompt_or_token == "prompt":
+        return df.corr().loc["num_prompt_tokens", metrics]
+    elif prompt_or_token == "target":
+        return df.corr().loc["num_target_tokens", metrics]
     return df.corr().loc["num_prompt_tokens", metrics]
 
 
@@ -278,3 +282,43 @@ def agg_weights_for_words(token_ids, weights, tokenizer):
     new_tokens.append(token_agg)
     new_weights.append(weight_agg)
     return new_tokens, new_weights
+
+
+def write_selected_responses_to_file(responses, file_name):
+    # Takes a response data frame and writes the results to a file
+    # The file name should align with the other responses and results file name for the same model
+    
+    top_five = responses.sort_values(by='F1-2', ascending=False).head(5)
+    bottom_five = responses.sort_values(by='F1-2', ascending=False).tail(5)
+    random_five = responses.sample(5, random_state=0)
+    
+    # write to markdown file
+    file_name = file_name.replace('_', '-')
+    with open(f"samples/{file_name}.md", "w") as f:
+        f.write(f"# {file_name}\n")
+        f.write("## Top Five Examples\n")
+        for index, row in top_five.iterrows():
+            f.write(f"### Example {index + 1}\n")
+            f.write(f"Prompt:\n```\n{row['prompt']}```\n")
+            f.write(f"Target:\n```\n{row['target']}```\n")
+            f.write(f"Response:\n```\n{row['response']}\n```\n")
+            f.write("\n")
+    
+        f.write("## Bottom Five Examples\n")
+        for index, row in bottom_five.iterrows():
+            f.write(f"### Example {index + 1}\n")
+            f.write(f"Prompt:\n```\n{row['prompt']}```\n")
+            f.write(f"Target:\n```\n{row['target']}```\n")
+            f.write(f"Response:\n```\n{row['response']}\n```\n")
+            f.write("\n")
+
+        metrics = ['bleu-1', 'bleu-2', 'rouge-1', 'rouge-2', 'rouge-L', 'F1-1', 'F1-2']
+        
+        f.write("## Random Five Examples\n")
+        for index, row in random_five.iterrows():
+            f.write(f"### Example {index + 1}\n")
+            f.write(f"Prompt:\n```\n{row['prompt']}```\n")
+            f.write(f"Target:\n```\n{row['target']}```\n")
+            f.write(f"Response:\n```\n{row['response']}\n```\n")
+            f.write(', '.join([f"{metric}: {round(random_five[metric].values[0], 5)}" for metric in metrics]))
+            f.write("\n")
