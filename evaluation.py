@@ -130,7 +130,7 @@ class EvaluationConfig(object):
         # from tokenizers import AddedToken
         # tokenizer.add_tokens(AddedToken("\n", normalized=False))  # self-ask uses newline breaks
         self.tokenizer_ = tokenizer
-        self.tokenizer_config_ = {"truncation": True, "return_tensors": "pt", "padding": "longest"}
+        self.tokenizer_config_ = {"truncation": True, "return_tensors": "tf", "padding": "longest"}
 
     def _set_opt_tokenizer(self):
         if self.model == 'opt-125m':
