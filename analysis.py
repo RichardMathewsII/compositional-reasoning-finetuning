@@ -131,18 +131,30 @@ def _load_macro_results() -> pd.DataFrame:
         
 
 
-def plot_context_size_distributions(df: pd.DataFrame, title: str = ""):
+def plot_context_size_distributions(df: pd.DataFrame, title: str = "", save: bool=False):
     # df is the micro_results dataframe with the number of prompt tokens
     # plot the distribution of the number of prompt tokens for correct vs not correct
     # plot the means of each distribution as vertical lines, and label the lines
-    plt.hist(df.loc[df["correct"] == True, "num_prompt_tokens"], bins=20, alpha=0.5, label="correct")
-    plt.hist(df.loc[df["correct"] == False, "num_prompt_tokens"], bins=20, alpha=0.5, label="incorrect")
-    plt.axvline(df.loc[df["correct"] == True, "num_prompt_tokens"].mean(), color='blue', linestyle='dashed', linewidth=1, label="mean correct")
-    plt.axvline(df.loc[df["correct"] == False, "num_prompt_tokens"].mean(), color='orange', linestyle='dashed', linewidth=1, label="mean incorrect")
+    plt.hist(df.loc[df["correct"] == True, "num_prompt_tokens"], bins=20, alpha=0.5, label="Correct")
+    plt.hist(df.loc[df["correct"] == False, "num_prompt_tokens"], bins=20, alpha=0.5, label="Incorrect")
+    plt.axvline(
+      df.loc[df["correct"] == True, "num_prompt_tokens"].mean(), 
+      color='blue', 
+      linestyle='dashed', 
+      linewidth=2, 
+      label="Average (Correct)")
+    plt.axvline(
+      df.loc[df["correct"] == False, "num_prompt_tokens"].mean(), 
+      color='orange', 
+      linestyle='dashed', 
+      linewidth=2, 
+      label="Average (Incorrect)")
     plt.legend(loc='upper right')
-    plt.title(title)
-    plt.xlabel("Number of prompt tokens")
+    # plt.title(title)
+    plt.xlabel("Context Size (Number of Tokens in Prompt)")
     plt.show()
+    if save:
+      plt.savefig(title+".png")
 
 
 def correlate_context_size(df: pd.DataFrame, prompt_or_token: str = "") -> float:
