@@ -4,6 +4,11 @@
   - 2WikiMultihopQA
   - CompositionalCelebrities
   - FinetuningData
+    - direct_dev_130.json: Direct prompting validation dataset with token count up to 130.
+    - direct_train_130.json: Direct prompting training dataset with token count up to 130.
+    - self_ask_dev_300.json: Self-ask prompting validation dataset with token count up to 300.
+    - self_ask_train_300.json: Self-ask prompting training dataset with token count up to 300.
+    - Training and validation (dev) data used in this paper can be downloaded [here](https://drive.google.com/drive/folders/1XxwkM58Uakst9iug_x_I06_tZ0TBvVfF?usp=sharing)
   - MultihopEvaluation
 - logs
   - data_generation.log
