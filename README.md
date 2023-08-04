@@ -28,7 +28,11 @@
   - Results used in this paper can be downloaded [here](https://drive.google.com/drive/folders/1XxwkM58Uakst9iug_x_I06_tZ0TBvVfF?usp=sharing)
 - samples
 - compositional-reasoning-paper.pdf
+- compositional-reasoning-proposal.pdf
 - compositional-reasoning-slides.pttx
+- evaluation.py: command line file to evaluate model performance.
+- training_demo.ipynb: Demo notebook for fine-tuning the baseline models.
+- training_utils.py: Utility tools to generate dataset, train keras model with limited ram, and etc.
 
 
 
