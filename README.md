@@ -1,3 +1,36 @@
+## File Structure
+- assets
+- data
+  - 2WikiMultihopQA
+  - CompositionalCelebrities
+  - FinetuningData
+  - MultihopEvaluation
+- logs
+  - data_generation.log
+  - evaluation.log
+  - token_stats.log
+- models
+  - flan-t5-small-direct.h5: Flan-T5 small model fine-tuned with direct prompting.
+  - flan-t5-small-self-ask.h5: Flan-T5 small model fine-tuned with self-ask prompting.
+  - t5-small-direct.h5: T5-small model fine-tuned with direct prompting.
+  - t5-small-self-ask.h5: T5-small model fine-tuned with self-ask prompting.
+  - Trained models can be downloaded [here](https://drive.google.com/drive/folders/1XxwkM58Uakst9iug_x_I06_tZ0TBvVfF?usp=sharing)
+- responses
+  - Naming convention: model - finetune method (if any) - with / without examplars - responses.json
+  - Responses used in this paper can be downloaded [here](https://drive.google.com/drive/folders/1XxwkM58Uakst9iug_x_I06_tZ0TBvVfF?usp=sharing)
+- results
+  - Naming convention: model - finetune method (if any) - with / without examplars - results.json
+  - Results used in this paper can be downloaded [here](https://drive.google.com/drive/folders/1XxwkM58Uakst9iug_x_I06_tZ0TBvVfF?usp=sharing)
+- samples
+- compositional-reasoning-paper.pdf
+- compositional-reasoning-slides.pttx
+
+
+
+
+
+
+
 ## Proposed Roadmap
 **I tag my recommendations with _recommended_ and other possibilities we can get to if we have time with _optional_.**
 
