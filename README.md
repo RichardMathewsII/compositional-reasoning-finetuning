@@ -30,7 +30,7 @@
   - Results used in this paper can be downloaded [here](https://drive.google.com/drive/folders/1XxwkM58Uakst9iug_x_I06_tZ0TBvVfF?usp=sharing)
 - samples
   - Qualitative Analysis Samples
-- compositional-reasoning-paper.pdf
+- [compositional-reasoning-paper.pdf]
 - compositional-reasoning-proposal.pdf
 - compositional-reasoning-slides.pttx
 - evaluation.py: command line file to evaluate model performance.
