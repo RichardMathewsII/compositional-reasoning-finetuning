@@ -24,6 +24,8 @@
   - Naming convention: model - finetune method (if any) - with / without examplars - responses.json
   - Responses used in this paper can be downloaded [here](https://drive.google.com/drive/folders/1XxwkM58Uakst9iug_x_I06_tZ0TBvVfF?usp=sharing)
 - results
+  - Plots
+    - Plots used in the paper.
   - Naming convention: model - finetune method (if any) - with / without examplars - results.json
   - Results used in this paper can be downloaded [here](https://drive.google.com/drive/folders/1XxwkM58Uakst9iug_x_I06_tZ0TBvVfF?usp=sharing)
 - samples
