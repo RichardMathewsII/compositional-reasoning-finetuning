@@ -31,8 +31,8 @@
 - samples
   - Qualitative Analysis Samples
 - [compositional-reasoning-paper.pdf](./compositional-reasoning-paper.pdf)
-- compositional-reasoning-proposal.pdf
-- compositional-reasoning-slides.pttx
+- [compositional-reasoning-proposal.pdf](./compositional-reasoning-proposal.pdf)
+- [compositional-reasoning-slides.pdf](./compositional-reasoning-slides.pdf)
 - evaluation.py: command line file to evaluate model performance.
 - training_demo.ipynb: Demo notebook for fine-tuning the baseline models.
 - training_utils.py: Utility tools to generate dataset, train keras model with limited ram, and etc.
