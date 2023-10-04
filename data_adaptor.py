@@ -38,6 +38,12 @@ class DataAdaptor:
                     examplars.append(adapt_CompositionalCelebrities_to_self_ask_examplar(example))
             else:
                 raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
+        elif self.dataset == "HotPotQA":
+            if strategy == "self-ask":
+                for example in examples:
+                    examplars.append(adapt_HotPotQA_to_self_ask_examplar(example))
+            else:
+                raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
         else:
             raise NotImplementedError(f"Dataset {self.dataset} not implemented.")
         return examplars
@@ -76,6 +82,13 @@ class DataAdaptor:
                     training_examples.append(adapt_CompositionalCelebrities_to_self_ask_training_example(example))
             else:
                 raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
+        elif self.dataset == "HotPotQA":
+            if strategy == "self-ask":
+                for example in tqdm(examples, desc="Generating HotPotQA self-ask training examples"):
+                    training_examples.append(adapt_HotPotQA_to_self_ask_training_example(example))
+            elif strategy == "direct":
+                for example in tqdm(examples, desc="Generating HotPotQA direct training examples"):
+                    training_examples.append(adapt_HotPotQA_to_direct_training_example(example))
         else:
             raise NotImplementedError(f"Dataset {self.dataset} not implemented.")
         
@@ -410,6 +423,131 @@ def adapt_CompositionalCelebrities_to_self_ask_training_example(example: dict) -
     return {"prompt": prompt, "target": target}
 
 
+def adapt_HotPotQA_to_self_ask_examplar(example: dict) -> str:
+    """Adapts a HotPotQA example to a self-ask exemplar.
+
+    Parameters
+    ----------
+    example : dict
+        A HotPotQA example.
+
+    Returns
+    -------
+    str
+        A self-ask exemplar.
+    """
+    question = example["question"]
+    answer = example["answer"]
+    supporting_facts = example["supporting_facts"]
+    context = dict(example["context"])
+    sub_questions = _compose_HotPotQA_subquestions(supporting_facts, context)
+
+    # examplar
+    examplar = """Question: {question}
+    Are follow up questions needed here: Yes.
+    """.format(
+        question=question
+        )
+    for sub_question in sub_questions:
+        examplar += """Follow up: {sub_question}
+        Intermediate answer: {intermediate_answer}
+        """.format(
+            sub_question=sub_question[0],
+            intermediate_answer=sub_question[1]
+            )
+    examplar += """So the final answer is: {answer}
+    """.format(
+        answer=answer
+        )
+    # remove white space at the beginning of each line
+    examplar = "\n".join([line.strip() for line in examplar.split("\n")])
+    return examplar
+
+
+def adapt_HotPotQA_to_self_ask_training_example(example: dict) -> str:
+    """Adapts a HotPotQA example to a self-ask text generation training example.
+    The question is modified by adding "Are follow up questions needed here:"
+    The reference text is modified by adding the self-ask rationale.
+
+    Parameters
+    ----------
+    example : dict
+        A HotPotQA example.
+
+    Returns
+    -------
+    str
+        A self-ask text generation training example 
+        of format {'prompt': prompt, 'target': target}.
+    """
+    question = example["question"]
+    answer = example["answer"]
+    supporting_facts = example["supporting_facts"]
+    context = dict(example["context"])
+    sub_questions = _compose_HotPotQA_subquestions(supporting_facts, context)
+
+    # training example with self-ask rationale output
+    # prompt engineering
+    facts = _compose_HotPotQA_facts(supporting_facts, context)
+
+    # ask question with self-ask rationale hint
+    prompt = facts + """\nQuestion: {question}
+    Are follow up questions needed here: 
+    """.format(
+        question=question
+        )
+    target = "Yes.\n"
+    for sub_question in sub_questions:
+        target += """Follow up: {sub_question}
+        Intermediate answer: {intermediate_answer}
+        """.format(
+            sub_question=sub_question[0],
+            intermediate_answer=sub_question[1]
+            )
+    target += """So the final answer is: {answer}
+    """.format(
+        answer=answer
+        )
+    # remove white space at the beginning of each line
+    prompt = "\n".join([line.strip() for line in prompt.split("\n")])
+    target = "\n".join([line.strip() for line in target.split("\n")])
+    return {"prompt": prompt, "target": target}
+
+
+def adapt_HotPotQA_to_direct_training_example(example: dict) -> str:
+    """Adapts a HotPotQA example to a text generation training example.
+    The question is modified by adding supporting facts.
+    This is a direct prompt (just asks the question).
+
+    Parameters
+    ----------
+    example : dict
+        A HotPotQA example.
+
+    Returns
+    -------
+    str
+        A direct text generation training example 
+        of format {'prompt': prompt, 'target': target}.
+    """
+    question = example["question"]
+    answer = example["answer"]
+    supporting_facts = example["supporting_facts"]
+    context = dict(example["context"])
+
+    # training example with supporting facts
+    facts = _compose_HotPotQA_facts(supporting_facts, context)
+    prompt = facts + """\nQuestion: {question}
+    Answer: """.format(
+        question=question
+        )
+    target = "{answer}".format(answer=answer)
+    # remove white space at the beginning of each line
+    prompt = "\n".join([line.strip() for line in prompt.split("\n")])
+    target = "\n".join([line.strip() for line in target.split("\n")])
+    return {"prompt": prompt, "target": target}
+
+
 def _structure_training_example(prompt: str, target: str) -> Dict[str, str]:
     """Structures a text generation training example.
     
@@ -492,4 +630,41 @@ def _compose_2WikiMultihopQA_subquestions(evidences) -> List[Tuple[str, str]]:
         else:
             pronoun = "What"
         sub_questions.append((f"{pronoun} is the {evidence[1]} of {evidence[0]}?", sub_answer))
+    return sub_questions
+
+
+def _compose_HotPotQA_facts(supporting_facts: List[List[Union[str, int]]], context: Dict[str, List[str]]) -> str:
+    
+    # add supporting facts to prompt
+    facts = "Facts:\n"
+    for idx, supp_fact in enumerate(supporting_facts):
+        fact_id = supp_fact[0]
+        sent_id = supp_fact[1]
+        fact = context[fact_id][sent_id]
+        facts += f"Fact #{idx}: " + fact + "\n"
+    return facts
+
+
+def _compose_HotPotQA_subquestions(supporting_facts, context) -> List[Tuple[str, str]]:
+    """Composes sub questions for 2WikiMultihopQA examples.
+
+    Returns sub questions of format (sub_question, sub_answer).
+    """
+    sub_questions = []
+    for supporting_fact in supporting_facts:
+        entity = supporting_fact[0]
+        relevant_sentence = supporting_fact[1]
+        relevant_context = context[entity][relevant_sentence]
+        # check if the sub_answer is a person or a thing
+        try:
+            entity_type = nlp(entity).ents[0].label_
+        except IndexError:
+            entity_type = "PERSON"
+        if entity_type == "PERSON":
+            pronoun = "Who"
+        elif entity_type == "DATE":
+            pronoun = "When"
+        else:
+            pronoun = "What"
+        sub_questions.append((f"{pronoun} is {entity}?", relevant_context))
     return sub_questions

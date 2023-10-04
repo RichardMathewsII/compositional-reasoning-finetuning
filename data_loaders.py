@@ -34,6 +34,37 @@ def load_2WikiMultihopQA(n_examples: int = -1, split: str = "train") -> List[Dic
     return data
 
 
+def load_HotPotQA(n_examples: int = -1, split: str = "train") -> List[Dict[str, Any]]:
+    '''Loads the HotPotQA dataset. There are two dev sets, a full wiki and distract or. This is related to the retrieval task, the questions and answers are the same and both dev sets.
+
+    Parameters
+    ----------
+    n_examples (optional) : filter for first n_examples, -1 means load all examples,
+        defaults to -1
+    split (optional) : load 'train', 'dev', or 'test' split, defaults to "train"
+
+    Returns
+    -------
+    List of examples, each example is a dictionary with the following keys:
+        - _id: a unique id for each sample
+        - question: a string
+        - answer: an answer to the question. The test data does not have this information.
+        - supporting_facts: a list, each element is a list that contains: [title, sent_id], title is the title of the paragraph, sent_id is the sentence index (start from 0) of the sentence that the model uses. The test data does not have this information.
+        - context: a list, each element is a list that contains [title, setences], sentences is a list of sentences.
+        - type: a string, there are two types of questions in our dataset: comparison, bridge
+        - level: difficulty level of the question, easy, medium, hard
+
+    '''
+    path = 'data/Super-NaturalInstructions/HotPotQA/'
+    # load json file into dictionary
+    with open(os.path.join(path, f'{split}.json'), 'r') as f:
+        data = json.load(f)
+    # load the first n_examples
+    if n_examples > 0:
+        data = data[:n_examples]
+    return data
+
+
 def load_CompositionalCelebrities(n_examples: int = -1, split: str = "train") -> List[Dict]:
     '''Loads the compositional celebrities dataset.
 
