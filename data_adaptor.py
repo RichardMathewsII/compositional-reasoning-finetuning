@@ -44,6 +44,8 @@ class DataAdaptor:
                     examplars.append(adapt_HotPotQA_to_self_ask_examplar(example))
             else:
                 raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
+        elif self.dataset == "StrategyQA":
+            raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
         else:
             raise NotImplementedError(f"Dataset {self.dataset} not implemented.")
         return examplars
@@ -89,6 +91,21 @@ class DataAdaptor:
             elif strategy == "direct":
                 for example in tqdm(examples, desc="Generating HotPotQA direct training examples"):
                     training_examples.append(adapt_HotPotQA_to_direct_training_example(example))
+            else:
+                raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
+        elif self.dataset == "StrategyQA":
+            if strategy == "self-ask":
+                for example in tqdm(examples, desc="Generating StrategyQA self-ask training examples"):
+                    training_examples.append(adapt_StrategyQA_to_self_ask_training_example(example))
+            elif strategy == "direct":
+                for example in tqdm(examples, desc="Generating StrategyQA direct training examples"):
+                    training_examples.append(adapt_StrategyQA_to_direct_training_example(example))
+            elif strategy == "squad":
+                for example in tqdm(examples, desc="Generating StrategyQA SQUAD training examples"):
+                    training_examples.append(adapt_StrategyQA_to_squad_example(example))
+            else:
+                raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
+                
         else:
             raise NotImplementedError(f"Dataset {self.dataset} not implemented.")
         
@@ -184,6 +201,60 @@ class DataAdaptor:
             del direct_examples
             del squad_examples
             del squad_examples_with_examplars
+            return evaluation_examples
+        
+        elif self.dataset == "StrategyQA":
+            self_ask_examples = self.generate_training_examples(examples, strategy="self-ask", examplars=examplars)
+            self_ask_examples_without_examplars = self.generate_training_examples(examples, strategy="self-ask")
+            direct_examples = self.generate_training_examples(examples, strategy="direct")
+            evaluation_examples = []
+            for (self_ask_example, 
+            self_ask_example_without_examplar, 
+            direct_example) in zip(self_ask_examples, 
+            self_ask_examples_without_examplars, 
+            direct_examples):
+                # prompts
+                self_ask_prompt = self_ask_example["prompt"]
+                self_ask_prompt_without_examplars = self_ask_example_without_examplar["prompt"]
+                direct_prompt = direct_example["prompt"]
+
+                # targets
+                self_ask_target = self_ask_example["target"]
+                direct_target = direct_example["target"]
+
+                # token counts
+                self_ask_target_tokens = self_ask_example["num_target_tokens"]
+                self_ask_prompt_tokens = self_ask_example["num_prompt_tokens"]
+                self_ask_tokens = self_ask_example["num_tokens"]
+                self_ask_prompt_without_examplars_tokens = self_ask_example_without_examplar["num_prompt_tokens"]
+                self_ask_without_examplars_tokens = self_ask_example_without_examplar["num_tokens"]
+                direct_target_tokens = direct_example["num_target_tokens"]
+                direct_prompt_tokens = direct_example["num_prompt_tokens"]
+                direct_tokens = direct_example["num_tokens"]
+
+                evaluation_examples.append({
+                    # prompts
+                    "direct_prompt": direct_prompt,
+                    "self_ask_prompt_with_examplars": self_ask_prompt,
+                    "self_ask_prompt_without_examplars": self_ask_prompt_without_examplars,
+
+                    # targets
+                    "self_ask_answer": self_ask_target,
+                    "answer": direct_target,
+
+                    # token counts
+                    "self_ask_target_tokens": self_ask_target_tokens,
+                    "self_ask_prompt_tokens": self_ask_prompt_tokens,
+                    "self_ask_prompt_without_examplars_tokens": self_ask_prompt_without_examplars_tokens,
+                    "self_ask_tokens": self_ask_tokens,
+                    "self_ask_without_examplars_tokens": self_ask_without_examplars_tokens,
+                    "direct_target_tokens": direct_target_tokens,
+                    "direct_prompt_tokens": direct_prompt_tokens,
+                    "direct_tokens": direct_tokens,
+                    })
+            del self_ask_examples
+            del self_ask_examples_without_examplars
+            del direct_examples
             return evaluation_examples
 
 
@@ -548,6 +619,124 @@ def adapt_HotPotQA_to_direct_training_example(example: dict) -> str:
     return {"prompt": prompt, "target": target}
 
 
+def adapt_StrategyQA_to_self_ask_training_example(example: dict) -> str:
+    """Adapts a StrategyQA example to a self-ask training example.
+    The question is modified by adding "Are follow up questions needed here:"
+    The reference text is just the answer because it is not possible to
+    generate a self-ask rationale for StrategyQA.
+
+    Parameters
+    ----------
+    example : dict
+        A StrategyQA example.
+
+    Returns
+    -------
+    str
+        A self-ask training example 
+        of format {'prompt': prompt, 'target': target}.
+    """
+    question = example["question"]
+    answer = str(example["answer"])  # answer may be a boolean
+    if answer.lower() == "true":
+        # model is not trained on true, it learns "Yes"
+        answer = "Yes"
+    elif answer.lower() == "false":
+        # model is not trained on false, it learns "No"
+        answer = "No"
+    facts = example["facts"]
+    # prompt engineering
+    facts = _compose_StrategyQA_facts(facts)
+    # ask question with self-ask rationale hint
+    prompt = facts + """\nQuestion: {question}
+    Are follow up questions needed here: 
+    """.format(
+        question=question
+        )
+    target = answer
+    # remove white space at the beginning of each line
+    prompt = "\n".join([line.strip() for line in prompt.split("\n")])
+    target = "\n".join([line.strip() for line in target.split("\n")])
+    return {"prompt": prompt, "target": target}
+
+
+def adapt_StrategyQA_to_direct_training_example(example: dict) -> str:
+    """Adapts a StrategyQA example to a direct training example.
+    The question is modified by adding supporting facts.
+
+    Parameters
+    ----------
+    example : dict
+        A StrategyQA example.
+
+    Returns
+    -------
+    str
+        A direct training example 
+        of format {'prompt': prompt, 'target': target}.
+    """
+    question = example["question"]
+    answer = str(example["answer"])  # answer may be a boolean
+    if answer.lower() == "true":
+        # model is not trained on true, it learns "Yes"
+        answer = "Yes"
+    elif answer.lower() == "false":
+        # model is not trained on false, it learns "No"
+        answer = "No"
+    facts = example["facts"]
+    # prompt engineering
+    facts = _compose_StrategyQA_facts(facts)
+    # ask question with self-ask rationale hint
+    prompt = facts + """\nQuestion: {question}
+    Answer: 
+    """.format(
+        question=question
+        )
+    target = answer
+    # remove white space at the beginning of each line
+    prompt = "\n".join([line.strip() for line in prompt.split("\n")])
+    target = "\n".join([line.strip() for line in target.split("\n")])
+    return {"prompt": prompt, "target": target}
+
+
+def adapt_StrategyQA_to_squad_example(example: dict) -> str:
+    """Adapts a StrategyQA example to a SQUAD training example.
+    The question is modified by adding supporting facts.
+
+    Parameters
+    ----------
+    example : dict
+        A StrategyQA example.
+
+    Returns
+    -------
+    str
+        A SQUAD training example 
+        of format {'prompt': prompt, 'target': target}.
+    """
+    question = example["question"]
+    answer = str(example["answer"])  # answer may be a boolean
+    if answer.lower() == "true":
+        # model is not trained on true, it learns "Yes"
+        answer = "Yes"
+    elif answer.lower() == "false":
+        # model is not trained on false, it learns "No"
+        answer = "No"
+    facts = example["facts"]
+    # prompt engineering
+    facts = _compose_StrategyQA_SQUAD_context(facts)
+    # ask question with self-ask rationale hint
+    prompt = "question: {question} ".format(
+        question=question
+        )
+    prompt += facts
+    target = answer
+    # remove white space at the beginning of each line
+    prompt = "\n".join([line.strip() for line in prompt.split("\n")])
+    target = "\n".join([line.strip() for line in target.split("\n")])
+    return {"prompt": prompt, "target": target}
+
+
 def _structure_training_example(prompt: str, target: str) -> Dict[str, str]:
     """Structures a text generation training example.
     
@@ -668,3 +857,20 @@ def _compose_HotPotQA_subquestions(supporting_facts, context) -> List[Tuple[str,
             pronoun = "What"
         sub_questions.append((f"{pronoun} is {entity}?", relevant_context))
     return sub_questions
+
+
+def _compose_StrategyQA_facts(supporting_facts: List[str]) -> str:
+    """Composes a fact set for a StrategyQA example."""
+    # add supporting facts to prompt
+    facts = "Facts:\n"
+    for idx, fact in enumerate(supporting_facts):
+        facts += f"Fact #{idx}: " + fact + "\n"
+    return facts
+
+
+def _compose_StrategyQA_SQUAD_context(supporting_facts: List[str]) -> str:
+    """Composes the context for a StrategyQA example in T5 SQUAD format."""
+    facts = "context: "
+    for idx, fact in enumerate(supporting_facts):
+        facts += fact + " "
+    return facts
