@@ -138,3 +138,40 @@ def load_TestData(file: str, n_examples: int = -1) -> List[Dict]:
     if n_examples > 0:
         data = data[:n_examples]
     return data
+
+
+def load_StrategyQA(split: str = "train", n_examples: int = -1) -> List[Dict]:
+    '''Loads the StrategyQA dataset.
+
+    Parameters
+    ----------
+    split (optional) : load 'train', 'dev', or 'test' split, defaults to "train"
+    n_examples (optional) : filter for first n_examples, -1 means load all examples, 
+        defaults to -1
+
+    Returns
+    -------
+    List of examples of examples, each example is a dictionary with the following keys:
+        - qid: Question ID.
+        - term: The Wikipedia term used to prime the question writer.
+        - description: A short description of the term, extracted from Wikipedia.
+        - question: A strategy question.
+        - answer: A boolean answer to the question (True/False for “Yes”/“No”).
+        - facts: (Noisy) facts provided by the question writer in order to guide the
+            following annotation tasks
+        - decomposition: A sequence (list) of single-step questions that form a 
+            reasoning process for answering the question. References to answers to 
+            previous steps are marked with “#”. Further explanations can be found in 
+            the paper.
+        - evidence: A list with 3 annotations, each annotation have matched evidence 
+            for each decomposition step. Evidence for a decomposition step is a list with 
+            paragraph IDs and potentially the reserved tags no_evidence and operation.
+    '''
+    path = 'data/StrategyQA/'
+    # load json file into dictionary
+    with open(os.path.join(path, f'{split}.json'), 'r') as f:
+        data = json.load(f)
+    # load the first n_examples
+    if n_examples > 0:
+        data = data[:n_examples]
+    return data
