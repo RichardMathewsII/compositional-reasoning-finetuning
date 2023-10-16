@@ -112,10 +112,12 @@ def generate_test_data(sample_size: int = -1) -> None:
 def generate_finetuning_data(
         direct: bool = True, 
         self_ask: bool = True, 
-        self_ask_examplars: int = 2,
+        chain_of_thought: bool = True,
+        n_examplars: int = 2,
         sample_size: int = -1,
         dev_size: int = 12576
         ):
+    
     """
     Generates training and dev data for direct and self-ask prompt fine-tuning.
     """
@@ -148,13 +150,13 @@ def generate_finetuning_data(
         logger.info("Initiating: generating self-ask prompt training examples")
         # write train and dev files for self-ask prompt fine-tuning
         # generate self-ask examplars
-        examplars = wiki_adaptor.generate_examplars(train_set[:self_ask_examplars], "self-ask")
+        examplars = wiki_adaptor.generate_examplars(train_set[:n_examplars], "self-ask")
         # write examplars to text file
         with open(path+"self_ask_examplars.txt", "w") as f:
             for examplar in examplars:
                 f.write(examplar + "\n")
 
-        self_ask_train_set = wiki_adaptor.generate_training_examples(train_set[self_ask_examplars:], "self-ask", examplars)
+        self_ask_train_set = wiki_adaptor.generate_training_examples(train_set[n_examplars:], "self-ask", examplars)
         self_ask_dev_set = wiki_adaptor.generate_training_examples(dev_set, "self-ask", examplars)
         logger.info("Completed: generating self-ask prompt training examples")
         # dump self-ask fine-tuning data to json
@@ -168,14 +170,39 @@ def generate_finetuning_data(
         del self_ask_train_set
         del self_ask_dev_set
 
+    if chain_of_thought:
+        logger.info("Initiating: generating chain-of-thought prompt training examples")
+        # write train and dev files for chain-of-thought prompt fine-tuning
+        # generate chain-of-thought examplars
+        examplars = wiki_adaptor.generate_examplars(train_set[:n_examplars], "chain-of-thought")
+        # write examplars to text file
+        with open(path+"chain_of_thought_examplars.txt", "w") as f:
+            for examplar in examplars:
+                f.write(examplar + "\n")
+
+        chain_of_thought_train_set = wiki_adaptor.generate_training_examples(train_set[n_examplars:], "chain-of-thought", examplars)
+        chain_of_thought_dev_set = wiki_adaptor.generate_training_examples(dev_set, "chain-of-thought", examplars)
+        logger.info("Completed: generating chain-of-thought prompt training examples")
+        # dump chain-of-thought fine-tuning data to json
+        logger.info("Initiating: exporting chain-of-thought prompt training examples to json")
+        with open(path+"chain_of_thought_train.json", "w") as f:
+            json.dump(chain_of_thought_train_set, f)
+        with open(path+"chain_of_thought_dev.json", "w") as f:
+            json.dump(chain_of_thought_dev_set, f)
+        logger.info("Completed: exporting chain-of-thought prompt training examples to json")
+        # clear data files
+        del chain_of_thought_train_set
+        del chain_of_thought_dev_set
+
 
 if __name__ == "__main__":
-    # generate_finetuning_data(
-    #     direct=False, 
-    #     self_ask=True, 
-    #     self_ask_examplars=2,
-    #     sample_size=-1,
-    #     dev_size=12576
-    #     )
+    generate_finetuning_data(
+        direct=False, 
+        self_ask=False, 
+        chain_of_thought=True, 
+        n_examplars=2,
+        sample_size=-1,
+        dev_size=12576
+        )
 
-    generate_test_data(sample_size=-1)
+    # generate_test_data(sample_size=-1)

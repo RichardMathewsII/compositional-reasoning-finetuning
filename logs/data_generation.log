@@ -1,0 +1,7 @@
+2023-10-16 14:59:09.699 | INFO     | __main__:generate_finetuning_data:124 - Initiating: data generation
+2023-10-16 14:59:09.699 | INFO     | __main__:generate_finetuning_data:125 - Initiating: train-dev split
+2023-10-16 14:59:17.898 | INFO     | __main__:generate_finetuning_data:127 - Completed: train-dev split
+2023-10-16 14:59:17.899 | INFO     | __main__:generate_finetuning_data:174 - Initiating: generating chain-of-thought prompt training examples
+2023-10-16 15:00:37.127 | INFO     | __main__:generate_finetuning_data:185 - Completed: generating chain-of-thought prompt training examples
+2023-10-16 15:00:37.129 | INFO     | __main__:generate_finetuning_data:187 - Initiating: exporting chain-of-thought prompt training examples to json
+2023-10-16 15:00:38.812 | INFO     | __main__:generate_finetuning_data:192 - Completed: exporting chain-of-thought prompt training examples to json
