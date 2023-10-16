@@ -30,6 +30,9 @@ class DataAdaptor:
             if strategy == "self-ask":
                 for example in examples:
                     examplars.append(adapt_2WikiMultihopQA_to_self_ask_examplar(example))
+            elif strategy == "chain-of-thought":
+                for example in examples:
+                    examplars.append(adapt_2WikiMultihopQA_to_chain_of_thought_examplar(example))
             else:
                 raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
         elif self.dataset == "CompositionalCelebrities":
@@ -76,6 +79,9 @@ class DataAdaptor:
             elif strategy == "squad":
                 for example in tqdm(examples, desc="Generating 2WikiMultihopQA SQUAD training examples"):
                     training_examples.append(adapt_2WikiMultihopQA_to_squad_example(example))
+            elif strategy == "chain-of-thought":
+                for example in tqdm(examples, desc="Generating 2WikiMultihopQA chain-of-thought training examples"):
+                    training_examples.append(adapt_2WikiMultihopQA_to_chain_of_thought_training_example(example))
             else:
                 raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
         elif self.dataset == "CompositionalCelebrities":
@@ -126,31 +132,46 @@ class DataAdaptor:
 
     def generate_evaluation_examples(self, examples: List[Dict[str, Any]], examplars: List[str] = []) -> List[Dict[str, str]]:
         if self.dataset == "2WikiMultihopQA":
+
+            # generate training examples for each evalutaion dataset
             self_ask_examples = self.generate_training_examples(examples, strategy="self-ask", examplars=examplars)
             self_ask_examples_without_examplars = self.generate_training_examples(examples, strategy="self-ask")
             direct_examples = self.generate_training_examples(examples, strategy="direct")
             squad_examples = self.generate_training_examples(examples, strategy="squad")
             squad_examples_with_examplars = self.generate_training_examples(examples, strategy="squad", examplars=examplars)
+            chain_of_thought_examples = self.generate_training_examples(examples, strategy="chain-of-thought", examplars=examplars)
+            chain_of_thought_examples_without_examplars = self.generate_training_examples(examples, strategy="chain-of-thought")
+
             evaluation_examples = []
+
             for (self_ask_example, 
-            self_ask_example_without_examplar, 
-            direct_example, 
-            squad_example, 
-            squad_example_with_examplar) in zip(self_ask_examples, 
-            self_ask_examples_without_examplars, 
-            direct_examples, 
-            squad_examples,
-            squad_examples_with_examplars):
+                self_ask_example_without_examplar, 
+                direct_example, 
+                squad_example, 
+                squad_example_with_examplar,
+                chain_of_thought_example, 
+                chain_of_thought_example_without_examplar) in zip(
+                self_ask_examples, 
+                self_ask_examples_without_examplars, 
+                direct_examples, 
+                squad_examples,
+                squad_examples_with_examplars,
+                chain_of_thought_examples,
+                chain_of_thought_examples_without_examplars):
+                
                 # prompts
                 self_ask_prompt = self_ask_example["prompt"]
                 self_ask_prompt_without_examplars = self_ask_example_without_examplar["prompt"]
                 direct_prompt = direct_example["prompt"]
                 squad_prompt = squad_example["prompt"]
                 squad_prompt_with_examplars = squad_example_with_examplar["prompt"]
+                chain_of_thought_prompt = chain_of_thought_example["prompt"]
+                chain_of_thought_prompt_without_examplars = chain_of_thought_example_without_examplar["prompt"]
 
                 # targets
                 self_ask_target = self_ask_example["target"]
                 direct_target = direct_example["target"]
+                chain_of_thought_target = chain_of_thought_example["target"]
 
                 # token counts
                 self_ask_target_tokens = self_ask_example["num_target_tokens"]
@@ -167,6 +188,11 @@ class DataAdaptor:
                 squad_prompt_tokens = squad_example["num_prompt_tokens"]
                 squad_tokens = squad_example["num_tokens"]
                 squad_with_examplars_tokens = squad_target_with_examplars_tokens + squad_prompt_with_examplars_tokens
+                chain_of_thought_target_tokens = chain_of_thought_example["num_target_tokens"]
+                chain_of_thought_prompt_tokens = chain_of_thought_example["num_prompt_tokens"]
+                chain_of_thought_tokens = chain_of_thought_example["num_tokens"]
+                chain_of_thought_prompt_without_examplars_tokens = chain_of_thought_example_without_examplar["num_prompt_tokens"]
+                chain_of_thought_without_examplars_tokens = chain_of_thought_example_without_examplar["num_tokens"]
 
                 evaluation_examples.append({
                     # prompts
@@ -175,10 +201,13 @@ class DataAdaptor:
                     "self_ask_prompt_with_examplars": self_ask_prompt,
                     "self_ask_prompt_without_examplars": self_ask_prompt_without_examplars,
                     "squad_prompt_with_examplars": squad_prompt_with_examplars,
+                    "chain_of_thought_prompt_with_examplars": chain_of_thought_prompt,
+                    "chain_of_thought_prompt_without_examplars": chain_of_thought_prompt_without_examplars,
 
                     # targets
                     "self_ask_answer": self_ask_target,
                     "answer": direct_target,
+                    "chain_of_thought_answer": chain_of_thought_target,
 
                     # token counts
                     "self_ask_target_tokens": self_ask_target_tokens,
@@ -194,13 +223,21 @@ class DataAdaptor:
                     "squad_prompt_tokens": squad_prompt_tokens,
                     "squad_prompt_with_examplars_tokens": squad_prompt_with_examplars_tokens,
                     "squad_tokens": squad_tokens,
-                    "squad_with_examplars_tokens": squad_with_examplars_tokens
+                    "squad_with_examplars_tokens": squad_with_examplars_tokens,
+                    "chain_of_thought_target_tokens": chain_of_thought_target_tokens,
+                    "chain_of_thought_prompt_tokens": chain_of_thought_prompt_tokens,
+                    "chain_of_thought_prompt_without_examplars_tokens": chain_of_thought_prompt_without_examplars_tokens,
+                    "chain_of_thought_tokens": chain_of_thought_tokens,
+                    "chain_of_thought_without_examplars_tokens": chain_of_thought_without_examplars_tokens,
                     })
+                
             del self_ask_examples
             del self_ask_examples_without_examplars
             del direct_examples
             del squad_examples
             del squad_examples_with_examplars
+            del chain_of_thought_examples
+            del chain_of_thought_examples_without_examplars
             return evaluation_examples
         
         elif self.dataset == "StrategyQA":
@@ -293,6 +330,34 @@ def adapt_2WikiMultihopQA_to_self_ask_examplar(example: dict) -> str:
     """.format(
         answer=answer
         )
+    # remove white space at the beginning of each line
+    examplar = "\n".join([line.strip() for line in examplar.split("\n")])
+    return examplar
+
+
+def adapt_2WikiMultihopQA_to_chain_of_thought_examplar(example: dict) -> str:
+    """Adapts a 2WikiMultihopQA example to a chain-of-thought exemplar.
+
+    Parameters
+    ----------
+    example : dict
+        A 2WikiMultihopQA example.
+
+    Returns
+    -------
+    str
+        A chain-of-thought exemplar.
+    """
+    question = example["question"]
+    answer = example["answer"]
+    evidences = example["evidences"]
+    chain_of_thought = _compose_2WikiMultihopQA_chain_of_thought(evidences)
+    
+    examplar = f"Question: {question}\nAnswer:"
+    for thought in chain_of_thought:
+        examplar += f" {thought}."
+        
+    examplar += f" So the answer is {answer}.\n"
     # remove white space at the beginning of each line
     examplar = "\n".join([line.strip() for line in examplar.split("\n")])
     return examplar
@@ -415,6 +480,45 @@ def adapt_2WikiMultihopQA_to_squad_example(example: dict) -> str:
     prompt += facts
 
     target = "{answer}".format(answer=answer)
+    # remove white space at the beginning of each line
+    prompt = "\n".join([line.strip() for line in prompt.split("\n")])
+    target = "\n".join([line.strip() for line in target.split("\n")])
+    return {"prompt": prompt, "target": target}
+
+
+def adapt_2WikiMultihopQA_to_chain_of_thought_training_example(example: dict) -> str:
+    """Adapts a 2WikiMultihopQA example to a chain-of-thought text generation training example.
+    The reference text is modified by adding the chain-of-thought rationale.
+
+    Parameters
+    ----------
+    example : dict
+        A 2WikiMultihopQA example.
+
+    Returns
+    -------
+    str
+        A chain-of-thought text generation training example 
+        of format {'prompt': prompt, 'target': target}.
+    """
+    question = example["question"]
+    answer = example["answer"]
+    evidences = example["evidences"]
+    supporting_facts = example["supporting_facts"]
+    context = dict(example["context"])
+    chain_of_thought = _compose_2WikiMultihopQA_chain_of_thought(evidences)
+    
+    # training example with chain-of-thought rationale output
+    # prompt engineering
+    facts = _compose_2WikiMultihopQA_facts(supporting_facts, context)
+    
+    # ask question with chain-of-thought rationale hint
+    prompt = facts + f"\nQuestion: {question}\n"
+    target = ""
+    for thought in chain_of_thought:
+        target += f" {thought}."
+        
+    target += f" So the answer is {answer}.\n"
     # remove white space at the beginning of each line
     prompt = "\n".join([line.strip() for line in prompt.split("\n")])
     target = "\n".join([line.strip() for line in target.split("\n")])
@@ -820,6 +924,65 @@ def _compose_2WikiMultihopQA_subquestions(evidences) -> List[Tuple[str, str]]:
             pronoun = "What"
         sub_questions.append((f"{pronoun} is the {evidence[1]} of {evidence[0]}?", sub_answer))
     return sub_questions
+
+
+def _compose_2WikiMultihopQA_chain_of_thought(evidences: List[List[str]]) -> List[str]:
+    """Composes a chain-of-thought for 2WikiMultihopQA examples.
+    
+    Returns a chain-of-thought of format [sentence_1, sentence_2...].
+    """
+
+    thought_structure_lookup = {
+        'director': f'EVIDENCE_2 directed EVIDENCE_0',
+        'country of citizenship': f'EVIDENCE_0 is a EVIDENCE_2 citizen',
+        'date of birth': f'EVIDENCE_0 was born on EVIDENCE_2',
+        'father': f"EVIDENCE_2 is the EVIDENCE_1 of EVIDENCE_0",
+        'composer': f'EVIDENCE_2 composed EVIDENCE_0',
+        'publication date': f'EVIDENCE_0 was published in EVIDENCE_2',
+        'place of birth': f'EVIDENCE_0 was born in EVIDENCE_2',
+        'country': f'EVIDENCE_0 is in EVIDENCE_2',
+        'country of origin': f'EVIDENCE_0 is from EVIDENCE_2',
+        'performer': f'EVIDENCE_2 performed EVIDENCE_0',
+        'place of burial': f'EVIDENCE_0 is buried in EVIDENCE_2',
+        'spouse': f'EVIDENCE_0 is married to EVIDENCE_2',
+        'date of death': f'EVIDENCE_0 died in EVIDENCE_2',
+        'founded by': f'EVIDENCE_2 founded EVIDENCE_0',
+        'cause of death': f'EVIDENCE_0 died from a EVIDENCE_2',
+        'mother': f"EVIDENCE_2 is the EVIDENCE_1 of EVIDENCE_0",
+        'place of death': f'EVIDENCE_0 died in EVIDENCE_2',
+        'sibling': f'EVIDENCE_0 and EVIDENCE_2 are siblings',
+        'educated at': f'EVIDENCE_0 attended the EVIDENCE_2',
+        'publisher': f'EVIDENCE_2 was the publisher of EVIDENCE_0',
+        'employer': f'EVIDENCE_0 is employed by EVIDENCE_2',
+        'child': f"EVIDENCE_2 is EVIDENCE_0's child",
+        'award received': f'EVIDENCE_0 received the EVIDENCE_2 award',
+        'inception': f'EVIDENCE_0 started in EVIDENCE_2',
+        'place of detention': f'EVIDENCE_0 was detained in the EVIDENCE_2',
+        'occupation': f'EVIDENCE_0 worked as a EVIDENCE_2',
+        'editor': f'EVIDENCE_2 was the editor of EVIDENCE_0',
+        'producer': f'EVIDENCE_2 produced EVIDENCE_0',
+        'creator': f'EVIDENCE_2 created EVIDENCE_0',
+        'presenter': f'EVIDENCE_2 presented EVIDENCE_0',
+        'student of': f'EVIDENCE_0 was the student of EVIDENCE_2',
+        'has part': f"EVIDENCE_2 was part of EVIDENCE_0",
+        'doctoral advisor': f'EVIDENCE_2 was the doctoral advisor of EVIDENCE_0',
+        'manufacturer': f'EVIDENCE_2 manufactured of EVIDENCE_0',
+    }
+
+    chain_of_thought = []
+    for evidence in evidences:
+        if evidence[1] in thought_structure_lookup.keys():
+            thought_structure = thought_structure_lookup[evidence[1]]
+            thought_structure = thought_structure.\
+                replace('EVIDENCE_0', evidence[0]).\
+                replace('EVIDENCE_1', evidence[1]).\
+                replace('EVIDENCE_2', evidence[2])
+        else:
+            thought_structure = f"{evidence[2]} is the {evidence[1]} of {evidence[0]}"
+        
+        chain_of_thought.append(thought_structure)
+ 
+    return chain_of_thought
 
 
 def _compose_HotPotQA_facts(supporting_facts: List[List[Union[str, int]]], context: Dict[str, List[str]]) -> str:
