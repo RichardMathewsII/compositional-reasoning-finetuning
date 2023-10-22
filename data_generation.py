@@ -33,19 +33,19 @@ def train_dev_split(
     return train_set, dev_set
 
 
-def generate_test_data(sample_size: int = -1) -> None:
+def generate_test_data(sample_size: int = -1, randomize_fact_order: bool = False, answer_before_rationale: bool = False) -> None:
     data = load_2WikiMultihopQA(n_examples=sample_size, split='test')
     wiki_adaptor = DataAdaptor("2WikiMultihopQA")
 
     # generate self-ask examplars
-    with open("data/FinetuningData/self_ask_examplars.txt", "r") as f:
+    with open(f"data/FinetuningData/self_ask_examplars_answerfirst-{answer_before_rationale}.txt", "r") as f:
         self_ask_examplars = f.readlines()
     # aggregate into string
     self_ask_examplars = "".join(self_ask_examplars)
     # split on \n\n
     self_ask_examplars = self_ask_examplars.split("\n\n")[:-1]
 
-    test_examples = wiki_adaptor.generate_evaluation_examples(data, self_ask_examplars)
+    test_examples = wiki_adaptor.generate_evaluation_examples(data, self_ask_examplars, randomize_fact_order)
 
     # create test files
     # Format: '<finetuning-status>-<examplar-status>.json'
@@ -97,15 +97,15 @@ def generate_test_data(sample_size: int = -1) -> None:
             "num_tokens": example["squad_with_examplars_tokens"]
         })
     
-    with open("data/MultihopEvaluation/self-ask-with-examplars.json", "w") as f:
+    with open(f"data/MultihopEvaluation/self-ask-with-examplars-randomfacts-{randomize_fact_order}.json", "w") as f:
         json.dump(self_ask_examplars_examples, f)
-    with open("data/MultihopEvaluation/self-ask-without-examplars.json", "w") as f:
+    with open(f"data/MultihopEvaluation/self-ask-without-examplars-randomfacts-{randomize_fact_order}.json", "w") as f:
         json.dump(self_ask_no_examplars_examples, f)
-    with open("data/MultihopEvaluation/direct-without-examplars.json", "w") as f:
+    with open(f"data/MultihopEvaluation/direct-without-examplars-randomfacts-{randomize_fact_order}.json", "w") as f:
         json.dump(direct_no_examplars_examples, f)
-    with open("data/MultihopEvaluation/baseline-with-examplars.json", "w") as f:
+    with open(f"data/MultihopEvaluation/baseline-with-examplars-randomfacts-{randomize_fact_order}.json", "w") as f:
         json.dump(baseline_examplars_examples, f)
-    with open("data/MultihopEvaluation/baseline-without-examplars.json", "w") as f:
+    with open(f"data/MultihopEvaluation/baseline-without-examplars-randomfacts-{randomize_fact_order}.json", "w") as f:
         json.dump(baseline_no_examplars_examples, f)
 
 
@@ -113,9 +113,11 @@ def generate_finetuning_data(
         direct: bool = True, 
         self_ask: bool = True, 
         chain_of_thought: bool = True,
-        n_examplars: int = 2,
+        n_examplars: int = 50,
         sample_size: int = -1,
-        dev_size: int = 12576
+        dev_size: int = 12576,
+        randomize_factor_order: bool = False,
+        answer_before_rationale: bool = False
         ):
     
     """
@@ -132,14 +134,14 @@ def generate_finetuning_data(
     if direct:
         logger.info("Initiating: generating direct prompt training examples")
         # write train and dev files for direct prompt fine-tuning
-        direct_train_set = wiki_adaptor.generate_training_examples(train_set[self_ask_examplars:], "direct")
-        direct_dev_set = wiki_adaptor.generate_training_examples(dev_set, "direct")
+        direct_train_set = wiki_adaptor.generate_training_examples(train_set[n_examplars:], "direct", randomize_fact_order=randomize_factor_order)
+        direct_dev_set = wiki_adaptor.generate_training_examples(dev_set, "direct", randomize_fact_order=randomize_factor_order)
         logger.info("Completed: generating direct prompt training examples")
         # dump direct fine-tuning data to json
         logger.info("Initiating: exporting direct prompt training examples to json")
-        with open(path+"direct_train.json", "w") as f:
+        with open(path+f"direct_train-randomfacts-{randomize_factor_order}.json", "w") as f:
             json.dump(direct_train_set, f)
-        with open(path+"direct_dev.json", "w") as f:
+        with open(path+f"direct_dev-randomfacts-{randomize_factor_order}.json", "w") as f:
             json.dump(direct_dev_set, f)
         logger.info("Completed: exporting direct prompt training examples to json")
         # clear data files
@@ -149,21 +151,33 @@ def generate_finetuning_data(
     if self_ask:
         logger.info("Initiating: generating self-ask prompt training examples")
         # write train and dev files for self-ask prompt fine-tuning
-        # generate self-ask examplars
-        examplars = wiki_adaptor.generate_examplars(train_set[:n_examplars], "self-ask")
+        # generate examplars (the train set is randomly shuffled, so selecting the top n_examplars is random sample)
+        examplars = wiki_adaptor.generate_examplars(train_set[:n_examplars], "self-ask", answer_before_rationale=answer_before_rationale)
         # write examplars to text file
-        with open(path+"self_ask_examplars.txt", "w") as f:
+        with open(path+f"self_ask_examplars_answerfirst-{answer_before_rationale}.txt", "w") as f:
             for examplar in examplars:
                 f.write(examplar + "\n")
 
-        self_ask_train_set = wiki_adaptor.generate_training_examples(train_set[n_examplars:], "self-ask", examplars)
-        self_ask_dev_set = wiki_adaptor.generate_training_examples(dev_set, "self-ask", examplars)
+        self_ask_train_set = wiki_adaptor.generate_training_examples(
+            train_set[n_examplars:], 
+            "self-ask", 
+            examplars, 
+            answer_before_rationale=answer_before_rationale,
+            randomize_factor_order=randomize_factor_order
+            )
+        self_ask_dev_set = wiki_adaptor.generate_training_examples(
+            dev_set, 
+            "self-ask", 
+            examplars, 
+            answer_before_rationale=answer_before_rationale, 
+            randomize_factor_order=randomize_factor_order
+            )
         logger.info("Completed: generating self-ask prompt training examples")
         # dump self-ask fine-tuning data to json
         logger.info("Initiating: exporting self-ask prompt training examples to json")
-        with open(path+"self_ask_train.json", "w") as f:
+        with open(path+f"self_ask_train_randomfact-{randomize_factor_order}_answerfirst-{answer_before_rationale}.json", "w") as f:
             json.dump(self_ask_train_set, f)
-        with open(path+"self_ask_dev.json", "w") as f:
+        with open(path+f"self_ask_dev_randomfact-{randomize_factor_order}_answerfirst-{answer_before_rationale}.json", "w") as f:
             json.dump(self_ask_dev_set, f)
         logger.info("Completed: exporting self-ask prompt training examples to json")
         # clear data files
@@ -174,20 +188,20 @@ def generate_finetuning_data(
         logger.info("Initiating: generating chain-of-thought prompt training examples")
         # write train and dev files for chain-of-thought prompt fine-tuning
         # generate chain-of-thought examplars
-        examplars = wiki_adaptor.generate_examplars(train_set[:n_examplars], "chain-of-thought")
+        examplars = wiki_adaptor.generate_examplars(train_set[:n_examplars], "chain-of-thought", randomize_fact_order=randomize_factor_order)
         # write examplars to text file
-        with open(path+"chain_of_thought_examplars.txt", "w") as f:
+        with open(path+f"chain_of_thought_examplars-randomfacts-{randomize_factor_order}.txt", "w") as f:
             for examplar in examplars:
                 f.write(examplar + "\n")
 
-        chain_of_thought_train_set = wiki_adaptor.generate_training_examples(train_set[n_examplars:], "chain-of-thought", examplars)
-        chain_of_thought_dev_set = wiki_adaptor.generate_training_examples(dev_set, "chain-of-thought", examplars)
+        chain_of_thought_train_set = wiki_adaptor.generate_training_examples(train_set[n_examplars:], "chain-of-thought", examplars, randomize_fact_order=randomize_factor_order)
+        chain_of_thought_dev_set = wiki_adaptor.generate_training_examples(dev_set, "chain-of-thought", examplars, randomize_fact_order=randomize_factor_order)
         logger.info("Completed: generating chain-of-thought prompt training examples")
         # dump chain-of-thought fine-tuning data to json
         logger.info("Initiating: exporting chain-of-thought prompt training examples to json")
-        with open(path+"chain_of_thought_train.json", "w") as f:
+        with open(path+f"chain_of_thought_train-randomfacts-{randomize_factor_order}.json", "w") as f:
             json.dump(chain_of_thought_train_set, f)
-        with open(path+"chain_of_thought_dev.json", "w") as f:
+        with open(path+f"chain_of_thought_dev-randomfacts-{randomize_factor_order}.json", "w") as f:
             json.dump(chain_of_thought_dev_set, f)
         logger.info("Completed: exporting chain-of-thought prompt training examples to json")
         # clear data files
@@ -202,7 +216,9 @@ if __name__ == "__main__":
         chain_of_thought=True, 
         n_examplars=2,
         sample_size=-1,
-        dev_size=12576
+        dev_size=12576,
+        randomize_factor_order=False,
+        answer_before_rationale=False
         )
 
     # generate_test_data(sample_size=-1)
