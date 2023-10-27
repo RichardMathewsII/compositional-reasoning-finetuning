@@ -1,4 +1,4 @@
-from random import random
+import random
 from typing import Any, Dict, List, Tuple, Union
 import spacy
 try:
@@ -35,7 +35,7 @@ class DataAdaptor:
                     examplars.append(adapt_2WikiMultihopQA_to_self_ask_examplar(example, answer_before_rationale))
             elif strategy == "chain-of-thought":
                 for example in examples:
-                    examplars.append(adapt_2WikiMultihopQA_to_chain_of_thought_examplar(example))
+                    examplars.append(adapt_2WikiMultihopQA_to_chain_of_thought_examplar(example, answer_before_rationale))
             else:
                 raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
         elif self.dataset == "CompositionalCelebrities":
@@ -87,7 +87,7 @@ class DataAdaptor:
                     training_examples.append(adapt_2WikiMultihopQA_to_squad_example(example))
             elif strategy == "chain-of-thought":
                 for example in tqdm(examples, desc="Generating 2WikiMultihopQA chain-of-thought training examples"):
-                    training_examples.append(adapt_2WikiMultihopQA_to_chain_of_thought_training_example(example, randomize_fact_order))
+                    training_examples.append(adapt_2WikiMultihopQA_to_chain_of_thought_training_example(example, answer_before_rationale, randomize_fact_order))
             else:
                 raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
         elif self.dataset == "CompositionalCelebrities":
@@ -138,17 +138,17 @@ class DataAdaptor:
         del training_examples
         return structured_training_examples
 
-    def generate_evaluation_examples(self, examples: List[Dict[str, Any]], examplars: List[str] = [], randomize_fact_order: bool = False, max_examplars: int = 2) -> List[Dict[str, str]]:
+    def generate_evaluation_examples(self, examples: List[Dict[str, Any]], examplars: List[str] = [], answer_before_rationale: bool = False, randomize_fact_order: bool = False, max_examplars: int = 2) -> List[Dict[str, str]]:
         if self.dataset == "2WikiMultihopQA":
 
             # generate training examples for each evalutaion dataset
-            self_ask_examples = self.generate_training_examples(examples, strategy="self-ask", examplars=examplars, randomize_fact_order=randomize_fact_order, max_examplars=max_examplars)
-            self_ask_examples_without_examplars = self.generate_training_examples(examples, strategy="self-ask", randomize_fact_order=randomize_fact_order)
+            self_ask_examples = self.generate_training_examples(examples, strategy="self-ask", examplars=examplars, answer_before_rationale=answer_before_rationale, randomize_fact_order=randomize_fact_order, max_examplars=max_examplars)
+            self_ask_examples_without_examplars = self.generate_training_examples(examples, strategy="self-ask", answer_before_rationale=answer_before_rationale, randomize_fact_order=randomize_fact_order)
             direct_examples = self.generate_training_examples(examples, strategy="direct", randomize_fact_order=randomize_fact_order)
             squad_examples = self.generate_training_examples(examples, strategy="squad")
             squad_examples_with_examplars = self.generate_training_examples(examples, strategy="squad", examplars=examplars, max_examplars=max_examplars)
-            chain_of_thought_examples = self.generate_training_examples(examples, strategy="chain-of-thought", examplars=examplars, randomize_fact_order=randomize_fact_order, max_examplars=max_examplars)
-            chain_of_thought_examples_without_examplars = self.generate_training_examples(examples, strategy="chain-of-thought", randomize_fact_order=randomize_fact_order)
+            chain_of_thought_examples = self.generate_training_examples(examples, strategy="chain-of-thought", examplars=examplars, answer_before_rationale=answer_before_rationale, randomize_fact_order=randomize_fact_order, max_examplars=max_examplars)
+            chain_of_thought_examples_without_examplars = self.generate_training_examples(examples, strategy="chain-of-thought", answer_before_rationale=answer_before_rationale, randomize_fact_order=randomize_fact_order)
 
             evaluation_examples = []
 
@@ -346,7 +346,7 @@ def adapt_2WikiMultihopQA_to_self_ask_examplar(example: dict, answer_before_rati
     return examplar
 
 
-def adapt_2WikiMultihopQA_to_chain_of_thought_examplar(example: dict) -> str:
+def adapt_2WikiMultihopQA_to_chain_of_thought_examplar(example: dict, answer_before_rationale: bool = False) -> str:
     """Adapts a 2WikiMultihopQA example to a chain-of-thought exemplar.
 
     Parameters
@@ -365,10 +365,15 @@ def adapt_2WikiMultihopQA_to_chain_of_thought_examplar(example: dict) -> str:
     chain_of_thought = _compose_2WikiMultihopQA_chain_of_thought(evidences)
     
     examplar = f"Question: {question}\nAnswer:"
+    if answer_before_rationale:
+        examplar += f" The answer is {answer}.\n"  
     for thought in chain_of_thought:
         examplar += f" {thought}."
-        
-    examplar += f" So the answer is {answer}.\n"
+    if not answer_before_rationale:
+        examplar += f" So the answer is {answer}.\n"
+    else:
+        examplar += "\n"
+    
     # remove white space at the beginning of each line
     examplar = "\n".join([line.strip() for line in examplar.split("\n")])
     return examplar
@@ -501,7 +506,7 @@ def adapt_2WikiMultihopQA_to_squad_example(example: dict) -> str:
     return {"prompt": prompt, "target": target}
 
 
-def adapt_2WikiMultihopQA_to_chain_of_thought_training_example(example: dict, randomize_fact_order: bool = False) -> str:
+def adapt_2WikiMultihopQA_to_chain_of_thought_training_example(example: dict, answer_before_rationale: bool = False, randomize_fact_order: bool = False) -> str:
     """Adapts a 2WikiMultihopQA example to a chain-of-thought text generation training example.
     The reference text is modified by adding the chain-of-thought rationale.
 
@@ -528,12 +533,19 @@ def adapt_2WikiMultihopQA_to_chain_of_thought_training_example(example: dict, ra
     facts = _compose_2WikiMultihopQA_facts(supporting_facts, context, randomize_fact_order)
     
     # ask question with chain-of-thought rationale hint
-    prompt = facts + f"\nQuestion: {question}\n"
-    target = ""
+    prompt = facts + f"\nQuestion: {question}\nAnswer:"
+    
+    if answer_before_rationale:
+        target = f" The answer is {answer}.\n"
+    else:
+        target = ""
     for thought in chain_of_thought:
         target += f" {thought}."
-        
-    target += f" So the answer is {answer}.\n"
+    if not answer_before_rationale:
+        target += f" So the answer is {answer}.\n"
+    else:
+        target += "\n"
+
     # remove white space at the beginning of each line
     prompt = "\n".join([line.strip() for line in prompt.split("\n")])
     target = "\n".join([line.strip() for line in target.split("\n")])
