@@ -322,22 +322,29 @@ def adapt_2WikiMultihopQA_to_self_ask_examplar(example: dict, answer_before_rati
     sub_questions = _compose_2WikiMultihopQA_subquestions(evidences)
     
     # examplar
-    examplar = """Question: {question}
-    Are follow up questions needed here: Yes.
-    """.format(
-        question=question
-        )
     if answer_before_rationale:
-        examplar += f"The answer is {answer}.\n"
+        examplar = """Question: {question}
+        First provide an answer, then break the reasoning down into intermediate questions.
+        The answer is {answer}. Here are the intermediate steps:
+        """.format(
+            question=question,
+            answer=answer
+            )
+    else:
+        examplar = """Question: {question}
+        First break the reasoning down into intermediate questions, then provide an answer.
+        """.format(
+            question=question
+            )
     for sub_question in sub_questions:
-        examplar += """Follow up: {sub_question}
+        examplar += """Intermediate question: {sub_question}
         Intermediate answer: {intermediate_answer}
         """.format(
             sub_question=sub_question[0],
             intermediate_answer=sub_question[1]
             )
     if not answer_before_rationale:
-        examplar += """So the final answer is: {answer}
+        examplar += """So the answer is: {answer}
         """.format(
             answer=answer
             )
@@ -407,17 +414,22 @@ def adapt_2WikiMultihopQA_to_self_ask_training_example(example: dict, answer_bef
     facts = _compose_2WikiMultihopQA_facts(supporting_facts, context, randomize_fact_order)
     
     # ask question with self-ask rationale hint
-    prompt = facts + """\nQuestion: {question}
-    Are follow up questions needed here: 
-    """.format(
-        question=question
-        )
     if answer_before_rationale:
-        target = f"Yes.\nThe answer is {answer}.\n"
+        prompt = facts + """\nQuestion: {question}
+        First provide an answer, then break the reasoning down into intermediate questions.
+        """.format(
+            question=question
+            )
+        target = f"The answer is {answer}. Here are the intermediate steps:\n"
     else:
-        target = "Yes.\n"
+        prompt = facts + """\nQuestion: {question}
+        First break the reasoning down into intermediate questions, then provide an answer.
+        """.format(
+            question=question
+            )
+        target = ""
     for sub_question in sub_questions:
-        target += """Follow up: {sub_question}
+        target += """Intermediate question: {sub_question}
         Intermediate answer: {intermediate_answer}
         """.format(
             sub_question=sub_question[0],
