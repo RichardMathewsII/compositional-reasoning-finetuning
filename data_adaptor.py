@@ -238,6 +238,7 @@ class DataAdaptor:
                     "chain_of_thought_tokens": chain_of_thought_tokens,
                     "chain_of_thought_without_examplars_tokens": chain_of_thought_without_examplars_tokens,
                     })
+                    
                 
             del self_ask_examples
             del self_ask_examples_without_examplars
