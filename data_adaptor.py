@@ -131,8 +131,20 @@ class DataAdaptor:
                 examplars = random.sample(examplars, max_examplars)
                 # add examplars to training examples
                 example["prompt"] = "Examples:\nSTART\n" + "\nEND\n\nSTART\n".join(examplars) + "\nEND\n\n" + example["prompt"]
+            if self.dataset == "2WikiMultihopQA":
+                metadata = {
+                    "hops": example["hops"], 
+                    "type": example["type"], 
+                    "relationships": example["relationships"]
+                    }
+            else:
+                metadata = {}
             # structure training example
-            structured_example = _structure_training_example(example["prompt"], example["target"])
+            structured_example = _structure_training_example(
+                example["prompt"], 
+                example["target"], 
+                metadata=metadata
+                    )
             structured_training_examples.append(structured_example)
         
         del training_examples
@@ -181,6 +193,17 @@ class DataAdaptor:
                 direct_target = direct_example["target"]
                 chain_of_thought_target = chain_of_thought_example["target"]
 
+                # metadata is the same for all examples, so we use the self-ask example
+                # which contains the metadata
+                ## hops
+                self_ask_hops = self_ask_example["hops"]
+
+                ## question types
+                self_ask_question_type = self_ask_example["type"]
+
+                ## relationships
+                self_ask_relationships = self_ask_example["relationships"]
+
                 # token counts
                 self_ask_target_tokens = self_ask_example["num_target_tokens"]
                 self_ask_prompt_tokens = self_ask_example["num_prompt_tokens"]
@@ -216,6 +239,11 @@ class DataAdaptor:
                     "self_ask_answer": self_ask_target,
                     "answer": direct_target,
                     "chain_of_thought_answer": chain_of_thought_target,
+
+                    # metadata
+                    "hops": self_ask_hops,
+                    "type": self_ask_question_type,
+                    "relationships": self_ask_relationships,
 
                     # token counts
                     "self_ask_target_tokens": self_ask_target_tokens,
@@ -408,6 +436,7 @@ def adapt_2WikiMultihopQA_to_self_ask_training_example(example: dict, answer_bef
     evidences = example["evidences"]
     supporting_facts = example["supporting_facts"]
     context = dict(example["context"])
+    question_type = example["type"]
     sub_questions = _compose_2WikiMultihopQA_subquestions(evidences)
     
     # training example with self-ask rationale output
@@ -444,7 +473,7 @@ def adapt_2WikiMultihopQA_to_self_ask_training_example(example: dict, answer_bef
     # remove white space at the beginning of each line
     prompt = "\n".join([line.strip() for line in prompt.split("\n")])
     target = "\n".join([line.strip() for line in target.split("\n")])
-    return {"prompt": prompt, "target": target}
+    return {"prompt": prompt, "target": target, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences]}
 
 
 def adapt_2WikiMultihopQA_to_direct_training_example(example: dict, randomize_fact_order: bool = False) -> str:
@@ -881,7 +910,7 @@ def adapt_StrategyQA_to_squad_example(example: dict) -> str:
     return {"prompt": prompt, "target": target}
 
 
-def _structure_training_example(prompt: str, target: str) -> Dict[str, str]:
+def _structure_training_example(prompt: str, target: str, metadata: Dict) -> Dict[str, str]:
     """Structures a text generation training example.
     
     Parameters
@@ -890,6 +919,8 @@ def _structure_training_example(prompt: str, target: str) -> Dict[str, str]:
         The prompt of the training example.
     target : str
         The target of the training example.
+    metadata : Dict
+        Metadata of the training example (e.g. number of hops).
     
     Returns
     -------
@@ -905,14 +936,16 @@ def _structure_training_example(prompt: str, target: str) -> Dict[str, str]:
                 "target": target, 
                 "num_prompt_tokens": len(prompt_tokens), 
                 "num_target_tokens": len(target_tokens),
-                "num_tokens": len(prompt_tokens) + len(target_tokens)
+                "num_tokens": len(prompt_tokens) + len(target_tokens),
+                **metadata
                 }
     except:
         return {"prompt": prompt, 
                 "target": target, 
                 "num_prompt_tokens": None, 
                 "num_target_tokens": None,
-                "num_tokens": None
+                "num_tokens": None,
+                **metadata
                 }
 
 
@@ -926,7 +959,7 @@ def _compose_2WikiMultihopQA_facts(supporting_facts: List[List[Union[str, int]]]
         fact_id = supp_fact[0]
         sent_id = supp_fact[1]
         fact = context[fact_id][sent_id]
-        facts += f"Fact #{idx}: " + fact + "\n"
+        facts += f"Fact #{idx+1}: " + fact + "\n"
     return facts
 
 
