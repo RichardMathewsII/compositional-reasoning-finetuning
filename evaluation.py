@@ -272,22 +272,22 @@ def decode(tokens: Iterable, config: EvaluationConfig) -> Iterable[str]:
     elif "opt" in model:
         return tokenizer.batch_decode(tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)
 
-
+# TODO update to account for the new question formats
 def extract_answer(generated_text: str) -> str:
     '''Extracts the answer from a generated text.'''
     # extract last line
     if '\n' not in generated_text:
-        # e.g. 'So the final answer is: <answer>'
+        # e.g. 'So the final answer is <answer>'
         # e.g. '<answer>'
         last_line =  generated_text
     else:
         pieces = generated_text.split('\n')
         if pieces[-1] == '':
-            # e.g. 'So the final answer is: <answer>\n' -> 'So the final answer is: <answer>'
+            # e.g. 'So the final answer is <answer>\n' -> 'So the final answer is <answer>'
             last_line = pieces[-2]
         else:
-            # e.g. '...Intermediate answer: ...\nSo the final answer is: <answer>'
-            # -> 'So the final answer is: <answer>'
+            # e.g. '...Intermediate answer: ...\nSo the final answer is <answer>'
+            # -> 'So the final answer is <answer>'
             last_line = pieces[-1]
 
     # extract text after colon
@@ -295,7 +295,7 @@ def extract_answer(generated_text: str) -> str:
         # e.g. '<answer>'
         answer = last_line
     else:
-        # e.g. 'So the final answer is: <answer>' -> '<answer>'
+        # e.g. 'So the final answer is <answer>' -> '<answer>'
         answer = last_line.split(':')[-1]
 
     # remove leading and trailing whitespace

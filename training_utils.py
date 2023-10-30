@@ -193,6 +193,51 @@ def finetune_self_ask(model_name, train_file, valid_file, checkpoint_filepath, m
   
     return model_wrapper
 
+
+# TODO disambiguate from evaluation.extract_answer
+def extract_answer_from_target(target: str)-> str:
+    """
+    Find the exact text of the answer given a target with the format "answer is <answer>."
+    """
+    
+    pattern = r'answer is\s*([^\.]+)\.'
+
+    match = re.search(pattern, target)
+    result = None
+    if match:
+        result = match.group(1).strip()
+    
+    return result
+
+
+def verify_answer_in_prompt(train_file: str, valid_file: str):
+    """
+    Need to verify the answers in the prompt so that the question can be answered
+    """
+    
+    # load each file of prompts and targets
+    for file in [train_file, valid_file]:
+        file = open(file)
+        js_file = json.load(file)
+        file.close()
+        
+        filtered_js_file = []
+        # only keep the examples with the answer in the prompt
+        for example in js_file:
+            if extract_answer_from_target(example['target']) in example['prompt']:
+                filtered_js_file.append(example)
+
+        # Serializing json
+        filtered_js_file = json.dumps(filtered_js_file)
+        
+        # create new file name, basically append answer verified at the end.
+        new_file = file.replace(".json", "") + '_' + str('answer_verified') + '.json'
+        
+        # Writing to sample.json
+        with open(new_file, 'w') as outfile:
+            outfile.write(filtered_js_file)
+
+
 def filter_token_size(train_file, valid_file, token_size):
     f_train = open(train_file)
     f_valid = open(valid_file)
