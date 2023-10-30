@@ -345,7 +345,7 @@ def adapt_2WikiMultihopQA_to_self_ask_examplar(example: dict, answer_before_rati
             intermediate_answer=sub_question[1]
             )
     if not answer_before_rationale:
-        examplar += """So the answer is: {answer}
+        examplar += """So the answer is {answer}.
         """.format(
             answer=answer
             )
@@ -437,7 +437,7 @@ def adapt_2WikiMultihopQA_to_self_ask_training_example(example: dict, answer_bef
             intermediate_answer=sub_question[1]
             )
     if not answer_before_rationale:
-        target += """So the final answer is: {answer}
+        target += """So the final answer is {answer}.
         """.format(
             answer=answer
             )
@@ -580,7 +580,7 @@ def adapt_CompositionalCelebrities_to_self_ask_examplar(example: dict) -> str:
     Intermediate answer: {sub_question_one_answer}
     Follow up: {sub_question_two}
     Intermediate answer: {sub_question_two_answer}
-    So the final answer is: {answer}
+    So the final answer is {answer}.
     """.format(
         question=question, 
         sub_question_one=sub_questions[0][0],
@@ -627,7 +627,7 @@ def adapt_CompositionalCelebrities_to_self_ask_training_example(example: dict) -
     Intermediate answer: {sub_question_one_answer}
     Follow up: {sub_question_two}
     Intermediate answer: {sub_question_two_answer}
-    So the final answer is: {answer}
+    So the final answer is {answer}.
     """.format(
         sub_question_one=sub_questions[0][0],
         sub_question_one_answer=sub_questions[0][1],
@@ -670,7 +670,7 @@ def adapt_HotPotQA_to_self_ask_examplar(example: dict) -> str:
             sub_question=sub_question[0],
             intermediate_answer=sub_question[1]
             )
-    examplar += """So the final answer is: {answer}
+    examplar += """So the final answer is {answer}.
     """.format(
         answer=answer
         )
@@ -719,7 +719,7 @@ def adapt_HotPotQA_to_self_ask_training_example(example: dict) -> str:
             sub_question=sub_question[0],
             intermediate_answer=sub_question[1]
             )
-    target += """So the final answer is: {answer}
+    target += """So the final answer is {answer}.
     """.format(
         answer=answer
         )
