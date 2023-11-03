@@ -239,8 +239,8 @@ if __name__ == "__main__":
                 self_ask=True, 
                 chain_of_thought=True, 
                 n_examplars=2,
-                sample_size=1000,#-1,
-                dev_size=100,#12576,
+                sample_size=-1,
+                dev_size=12576,
                 answer_before_rationale=answer_before_rationale,
                 randomize_fact_order=randomize_fact_order
                 )
