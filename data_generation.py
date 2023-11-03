@@ -53,7 +53,7 @@ def generate_test_data(
         logger.info("Completed: generating direct prompt testing examples")
         # dump direct fine-tuning data to json
         logger.info("Initiating: exporting direct prompt testing examples to json")
-        with open(path+f"direct-random_facts-{randomize_fact_order}.json", "w") as f:
+        with open(path+f"direct-random_facts={randomize_fact_order}.json", "w") as f:
             json.dump(direct_test_set, f)
         logger.info("Completed: exporting direct prompt testing examples to json")
         # clear data files
@@ -109,100 +109,6 @@ def generate_test_data(
         # clear data files
         del chain_of_thought_test_set
 
-    # data = load_2WikiMultihopQA(n_examples=sample_size, split='test')
-    # wiki_adaptor = DataAdaptor("2WikiMultihopQA")
-
-    # # generate self-ask examplars
-    # with open(f"data/FinetuningData/self_ask_examplars-answer_first={answer_before_rationale}.txt", "r") as f:
-    #     self_ask_examplars = f.readlines()
-    # # aggregate into string
-    # self_ask_examplars = "".join(self_ask_examplars)
-    # # split on \n\n
-    # self_ask_examplars = self_ask_examplars.split("\n\n")[:-1]
-
-    # test_examples = wiki_adaptor.generate_evaluation_examples(data, direct, self_ask, chain_of_thought, self_ask_examplars, answer_before_rationale, randomize_fact_order)
-
-    # # create test files
-    # self_ask_examplars_examples = []
-    # self_ask_no_examplars_examples = []
-    # chain_of_thought_examplars_examples = []
-    # chain_of_thought_no_examplars_examples = []
-    # direct_no_examplars_examples = []
-    # baseline_examplars_examples = []
-    # baseline_no_examplars_examples = []
-    # for example in test_examples:
-    #     self_ask_examplars_examples.append({
-    #         "prompt": example["self_ask_prompt_with_examplars"],
-    #         "target": example["self_ask_answer"],
-    #         "answer": example["answer"],
-    #         "num_prompt_tokens": example["self_ask_prompt_tokens"],
-    #         "num_target_tokens": example["self_ask_target_tokens"],
-    #         "num_tokens": example["self_ask_tokens"]
-    #     })
-    #     self_ask_no_examplars_examples.append({
-    #         "prompt": example["self_ask_prompt_without_examplars"],
-    #         "target": example["self_ask_answer"],
-    #         "answer": example["answer"],
-    #         "num_prompt_tokens": example["self_ask_prompt_without_examplars_tokens"],
-    #         "num_target_tokens": example["self_ask_target_tokens"],
-    #         "num_tokens": example["self_ask_without_examplars_tokens"]
-    #     })
-    #     chain_of_thought_examplars_examples.append({
-    #         "prompt": example["chain_of_thought_prompt_with_examplars"],
-    #         "target": example["chain_of_thought_answer"],
-    #         "answer": example["answer"],
-    #         "num_prompt_tokens": example["chain_of_thought_prompt_tokens"],
-    #         "num_target_tokens": example["chain_of_thought_target_tokens"],
-    #         "num_tokens": example["chain_of_thought_tokens"]
-    #     })
-    #     chain_of_thought_no_examplars_examples.append({
-    #         "prompt": example["chain_of_thought_prompt_without_examplars"],
-    #         "target": example["chain_of_thought_answer"],
-    #         "answer": example["answer"],
-    #         "num_prompt_tokens": example["chain_of_thought_prompt_without_examplars_tokens"],
-    #         "num_target_tokens": example["chain_of_thought_target_tokens"],
-    #         "num_tokens": example["chain_of_thought_without_examplars_tokens"]
-    #     })
-    #     direct_no_examplars_examples.append({
-    #         "prompt": example["direct_prompt"],
-    #         "target": example["answer"],
-    #         "answer": example["answer"],
-    #         "num_prompt_tokens": example["direct_prompt_tokens"],
-    #         "num_target_tokens": example["direct_target_tokens"],
-    #         "num_tokens": example["direct_tokens"]
-    #     })
-    #     baseline_no_examplars_examples.append({
-    #         "prompt": example["squad_prompt"],
-    #         "target": example["answer"],
-    #         "answer": example["answer"],
-    #         "num_prompt_tokens": example["squad_prompt_tokens"],
-    #         "num_target_tokens": example["squad_target_tokens"],
-    #         "num_tokens": example["squad_tokens"]
-    #     })
-    #     baseline_examplars_examples.append({
-    #         "prompt": example["squad_prompt_with_examplars"],
-    #         "target": example["self_ask_answer"],
-    #         "answer": example["answer"],
-    #         "num_prompt_tokens": example["squad_prompt_with_examplars_tokens"],
-    #         "num_target_tokens": example["squad_target_with_examplars_tokens"],
-    #         "num_tokens": example["squad_with_examplars_tokens"]
-    #     })
-    
-    # with open(f"data/MultihopEvaluation/self_ask-with_examplars-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}.json", "w") as f:
-    #     json.dump(self_ask_examplars_examples, f)
-    # with open(f"data/MultihopEvaluation/self_ask-without_examplars-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}.json", "w") as f:
-    #     json.dump(self_ask_no_examplars_examples, f)
-    # with open(f"data/MultihopEvaluation/chain_of_thought-with_examplars-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}.json", "w") as f:
-    #     json.dump(chain_of_thought_examplars_examples, f)
-    # with open(f"data/MultihopEvaluation/chain_of_thought-without_examplars-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}.json", "w") as f:
-    #     json.dump(chain_of_thought_no_examplars_examples, f)
-    # with open(f"data/MultihopEvaluation/direct-without_examplars-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}.json", "w") as f:
-    #     json.dump(direct_no_examplars_examples, f)
-    # with open(f"data/MultihopEvaluation/baseline-with_examplars-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}.json", "w") as f:
-    #     json.dump(baseline_examplars_examples, f)
-    # with open(f"data/MultihopEvaluation/baseline-without_examplars-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}.json", "w") as f:
-    #     json.dump(baseline_no_examplars_examples, f)
-
 
 def generate_finetuning_data(
         direct: bool = True, 
@@ -234,9 +140,9 @@ def generate_finetuning_data(
         logger.info("Completed: generating direct prompt training examples")
         # dump direct fine-tuning data to json
         logger.info("Initiating: exporting direct prompt training examples to json")
-        with open(path+f"direct_train-random_facts-{randomize_fact_order}.json", "w") as f:
+        with open(path+f"direct_train-random_facts={randomize_fact_order}.json", "w") as f:
             json.dump(direct_train_set, f)
-        with open(path+f"direct_dev-random_facts-{randomize_fact_order}.json", "w") as f:
+        with open(path+f"direct_dev-random_facts={randomize_fact_order}.json", "w") as f:
             json.dump(direct_dev_set, f)
         logger.info("Completed: exporting direct prompt training examples to json")
         # clear data files
