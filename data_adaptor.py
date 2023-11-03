@@ -77,16 +77,24 @@ class DataAdaptor:
         training_examples = []
         if self.dataset == "2WikiMultihopQA":
             if strategy == "self-ask":
-                for example in tqdm(examples, desc="Generating 2WikiMultihopQA self-ask training examples"):
+                for example in tqdm(examples, 
+                                    desc=f"Generating 2WikiMultihopQA self-ask answer_before_rationale={answer_before_rationale} randomize_fact_order={randomize_fact_order} training examples", 
+                                    mininterval=2.0):
                     training_examples.append(adapt_2WikiMultihopQA_to_self_ask_training_example(example, answer_before_rationale, randomize_fact_order))
             elif strategy == "direct":
-                for example in tqdm(examples, desc="Generating 2WikiMultihopQA direct training examples"):
+                for example in tqdm(examples, 
+                                    desc=f"Generating 2WikiMultihopQA direct randomize_fact_order={randomize_fact_order} training examples", 
+                                    mininterval=2.0):
                     training_examples.append(adapt_2WikiMultihopQA_to_direct_training_example(example, randomize_fact_order))
             elif strategy == "squad":
-                for example in tqdm(examples, desc="Generating 2WikiMultihopQA SQUAD training examples"):
+                for example in tqdm(examples, 
+                                    desc=f"Generating 2WikiMultihopQA SQUAD training examples", 
+                                    mininterval=2.0):
                     training_examples.append(adapt_2WikiMultihopQA_to_squad_example(example))
             elif strategy == "chain-of-thought":
-                for example in tqdm(examples, desc="Generating 2WikiMultihopQA chain-of-thought training examples"):
+                for example in tqdm(examples, 
+                                    desc=f"Generating 2WikiMultihopQA chain-of-thought answer_before_rationale={answer_before_rationale} randomize_fact_order={randomize_fact_order} training examples", 
+                                    mininterval=2.0):
                     training_examples.append(adapt_2WikiMultihopQA_to_chain_of_thought_training_example(example, answer_before_rationale, randomize_fact_order))
             else:
                 raise NotImplementedError(f"Strategy {strategy} not implemented for {self.dataset}.")
@@ -495,7 +503,10 @@ def adapt_2WikiMultihopQA_to_direct_training_example(example: dict, randomize_fa
     question = example["question"]
     answer = example["answer"]
     supporting_facts = example["supporting_facts"]
+    evidences = example["evidences"]
+    supporting_facts = example["supporting_facts"]
     context = dict(example["context"])
+    question_type = example["type"]
 
     # training example with supporting facts
     facts = _compose_2WikiMultihopQA_facts(supporting_facts, context, randomize_fact_order)
@@ -507,7 +518,7 @@ def adapt_2WikiMultihopQA_to_direct_training_example(example: dict, randomize_fa
     # remove white space at the beginning of each line
     prompt = "\n".join([line.strip() for line in prompt.split("\n")])
     target = "\n".join([line.strip() for line in target.split("\n")])
-    return {"prompt": prompt, "target": target}
+    return {"prompt": prompt, "target": target, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences]}
 
 
 def adapt_2WikiMultihopQA_to_squad_example(example: dict) -> str:
@@ -568,6 +579,7 @@ def adapt_2WikiMultihopQA_to_chain_of_thought_training_example(example: dict, an
     evidences = example["evidences"]
     supporting_facts = example["supporting_facts"]
     context = dict(example["context"])
+    question_type = example["type"]
     chain_of_thought = _compose_2WikiMultihopQA_chain_of_thought(evidences)
     
     # training example with chain-of-thought rationale output
@@ -591,7 +603,7 @@ def adapt_2WikiMultihopQA_to_chain_of_thought_training_example(example: dict, an
     # remove white space at the beginning of each line
     prompt = "\n".join([line.strip() for line in prompt.split("\n")])
     target = "\n".join([line.strip() for line in target.split("\n")])
-    return {"prompt": prompt, "target": target}
+    return {"prompt": prompt, "target": target, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences]}
 
 
 def adapt_CompositionalCelebrities_to_self_ask_examplar(example: dict) -> str:
