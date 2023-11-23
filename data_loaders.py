@@ -91,7 +91,13 @@ def load_CompositionalCelebrities(n_examples: int = -1, split: str = "train") ->
     return data
 
 
-def load_FinetuningData(n_examples: int = -1, split: str = "train", strategy: str = "direct") -> List[Dict]:
+def load_FinetuningData(
+        n_examples: int = -1,
+        split: str = "train",
+        strategy: str = "direct",
+        answer_first: bool = False,
+        random_facts: bool = False
+        ) -> List[Dict]:
     '''Loads the restructured version of the 2WikiMultihopQA dataset for fine-tuning.
 
     Parameters
@@ -102,6 +108,8 @@ def load_FinetuningData(n_examples: int = -1, split: str = "train", strategy: st
     strategy (optional) : specify prompting strategy, possible values are
         - "direct": directly prompt the model with the question
         - "self_ask": prompt and target augmented with self-ask rationale
+    answer_first (optional) : whether the answer comes before the rationale, defaults to False
+    random_facts (optional) : whether to use random fact order, defaults to False
 
     Returns
     -------
@@ -109,7 +117,11 @@ def load_FinetuningData(n_examples: int = -1, split: str = "train", strategy: st
     '''
     path = 'data/FinetuningData/'
     # load json file into dictionary
-    with open(os.path.join(path, f'{strategy}_{split}.json'), 'r') as f:
+    if strategy == 'direct':
+        file_path = os.path.join(path, f'{strategy}_{split}-random_facts={random_facts}.json')
+    else:
+        file_path = os.path.join(path, f'{strategy}_{split}-answer_first={answer_first}-random_facts={random_facts}.json')
+    with open(file_path, 'r') as f:
         data = json.load(f)
     # load the first n_examples
     if n_examples > 0:
