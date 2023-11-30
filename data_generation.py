@@ -41,7 +41,7 @@ def generate_test_data(
         sample_size: int = -1,
         answer_before_rationale: bool = False,
         randomize_fact_order: bool = False) -> None:
-    
+
     test_set = load_2WikiMultihopQA(n_examples=sample_size, split='test')
     wiki_adaptor = DataAdaptor("2WikiMultihopQA")
     path = "data/MultihopEvaluation/"

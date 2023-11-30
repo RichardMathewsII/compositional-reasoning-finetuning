@@ -1,11 +1,13 @@
 import random
 from typing import Any, Dict, List, Tuple, Union
+import re
 import spacy
 try:
     from transformers import T5Tokenizer
 except:
     print("failed to load tokenizer")
 from tqdm import tqdm
+from loguru import logger
 
 # Set random seed
 random.seed(42)
@@ -156,6 +158,9 @@ class DataAdaptor:
             structured_training_examples.append(structured_example)
         
         del training_examples
+
+        structured_training_examples = _verify_answer_in_prompt(structured_training_examples)
+        
         return structured_training_examples
 
     def generate_evaluation_examples(self, examples: List[Dict[str, Any]], examplars: List[str] = [], answer_before_rationale: bool = False, randomize_fact_order: bool = False, max_examplars: int = 2) -> List[Dict[str, str]]:
@@ -1124,3 +1129,40 @@ def _compose_StrategyQA_SQUAD_context(supporting_facts: List[str]) -> str:
     for idx, fact in enumerate(supporting_facts):
         facts += fact + " "
     return facts
+
+
+def _extract_answer_from_target(target: str) -> str:
+    """
+    Find the exact text of the answer given a target
+    """
+
+    result = None
+    pattern = r'answer is\s*([^\.]+)\.'
+    match = re.search(pattern, target)
+
+    # format of the chain of thought and self ask answers
+    if match:
+        result = match.group(1).strip()
+    else:
+        # format of direct
+        result = target
+
+    return result
+
+
+def _verify_answer_in_prompt(structured_training_examples: List) -> List:
+    """
+    Need to verify the answers in the prompt so that the question can be answered
+    """
+
+    filtered_training_examples = []
+
+    # only keep the examples with the answer in the prompt
+    for example in structured_training_examples:
+        answer = _extract_answer_from_target(example['target'])
+        if answer is not None and (answer.lower() in example['prompt'].lower() or answer in ['yes', 'no']):
+            filtered_training_examples.append(example)
+        else:
+            logger.info(f"Answer not in prompt:\n{example['prompt']}\n{example['target']}")
+
+    return filtered_training_examples
