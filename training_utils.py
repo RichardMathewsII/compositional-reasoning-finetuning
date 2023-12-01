@@ -10,6 +10,7 @@ from tensorflow.keras import layers
 from transformers import T5Tokenizer, TFT5ForConditionalGeneration
 
 import json
+from loguru import logger
 
 
 def qa_split(examples: List[Dict[str, str]], triple=False) -> List[str]:
@@ -192,6 +193,7 @@ def finetune_self_ask(model_name, train_file, valid_file, checkpoint_filepath, m
                       callbacks=[model_checkpoint_callback])
   
     return model_wrapper
+
 
 def filter_token_size(train_file, valid_file, token_size):
     f_train = open(train_file)

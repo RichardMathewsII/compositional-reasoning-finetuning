@@ -163,6 +163,7 @@ cython_debug/
 *.jsonl
 !fixtures.json
 *.zip
+*.txt
 
 # MISC
 .DS_STORE
