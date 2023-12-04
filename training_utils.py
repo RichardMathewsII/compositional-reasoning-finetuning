@@ -179,6 +179,8 @@ def finetune_self_ask(model_name, train_file, valid_file, checkpoint_filepath, m
     if previous_checkpoint != "":
         model_wrapper.load_weights(previous_checkpoint)
         first_batch = int(re.search(r'weights\.(\d+)-(\d+)\.hdf5', previous_checkpoint).group(2))
+    else:
+        first_batch = 0
 
     train_data_generator = MultihopQADataGenerator(
         tokenizer=t5_tokenizer,
