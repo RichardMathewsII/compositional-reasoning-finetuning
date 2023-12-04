@@ -63,23 +63,31 @@ class MultihopQADataGenerator(tf.keras.utils.Sequence):
     def __init__(self,
                  tokenizer,
                  model,
-                 n_examples,
+                #  n_examples,
                  data_filename,
                  max_length=512,
                  batch_size=16,
-                 shuffle=True):
+                 shuffle=True,
+                 first_batch=0):
 
         self.tokenizer = tokenizer
         self.model = model
-        self.n_examples = n_examples
+        # self.n_examples = n_examples
         self.data_filename = data_filename
         self.max_length = max_length
         self.batch_size = batch_size
         self.shuffle = shuffle
 
+        # useful for resuming from the middle of a checkpoint
+        first_batch_start = first_batch * self.batch_size
+        self.df = pd.read_json(self.data_filename).iloc[first_batch_start:]
+        self.n_examples = len(self.df)
+        
         # Initialize row order, call on_epoch_end to shuffle row indices
         self.row_order = np.arange(1, self.n_examples+1)
-        self.on_epoch_end()
+        np.random.seed(0)
+        if self.shuffle:
+            self.row_order = list(np.random.permutation(self.row_order))
 
     def __len__(self):
         # Return the number of batches in the full dataset
@@ -92,8 +100,8 @@ class MultihopQADataGenerator(tf.keras.utils.Sequence):
         # Indices to skip are the ones in the shuffled row_order before and
         # after the chunk we'll use for this batch
         batch_idx_skip = self.row_order[:batch_start] + self.row_order[batch_end:]
-        df = pd.read_json(self.data_filename)
-        df = df.iloc[batch_start : batch_end]
+        
+        df = self.df.iloc[batch_start:batch_end]
 
         text_pairs = df[['prompt', 'target']].values.astype(str).tolist()
 
@@ -114,8 +122,15 @@ class MultihopQADataGenerator(tf.keras.utils.Sequence):
                 self.on_epoch_end()
 
     def on_epoch_end(self):
+
+        np.random.seed(0)
         if self.shuffle:
             self.row_order = list(np.random.permutation(self.row_order))
+
+        if self.first_batch != 0:
+            self.first_batch = 0
+            self.df = pd.read_json(self.data_filename)
+            self.n_examples = len(self.df)
 
 
 def build_t5_training_wrapper_model(t5_model, max_length):
@@ -155,33 +170,36 @@ def finetune_self_ask(model_name, train_file, valid_file, checkpoint_filepath, m
     # Get number of text pairs for train and valid set.
     n_train_pairs = len(js_train) #154876
     n_valid_pairs = len(js_valid) #12576
-  
+    
     del js_train
     del js_valid
-  
+
+    model_wrapper = build_t5_training_wrapper_model(t5_model, max_length)
+    
+    if previous_checkpoint != "":
+        model_wrapper.load_weights(previous_checkpoint)
+        first_batch = int(re.search(r'weights\.(\d+)-(\d+)\.hdf5', previous_checkpoint).group(2))
+
     train_data_generator = MultihopQADataGenerator(
         tokenizer=t5_tokenizer,
         model=t5_model,
-        n_examples=n_train_pairs,
+        # n_examples=n_train_pairs,
         data_filename=train_file,
         max_length=max_length,
-        batch_size=batch_size
+        batch_size=batch_size,
+        first_batch=first_batch
       )
     
     valid_data_generator = MultihopQADataGenerator(
         tokenizer=t5_tokenizer,
         model=t5_model,
-        n_examples=n_valid_pairs,
+        # n_examples=n_valid_pairs,
         data_filename=valid_file,
         max_length=max_length,
-        batch_size=batch_size
+        batch_size=batch_size,
+        first_batch=first_batch
     )
-  
-    model_wrapper = build_t5_training_wrapper_model(t5_model, max_length)
     
-    if previous_checkpoint != "":
-        model_wrapper.load_weights(previous_checkpoint)
-
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_filepath,
         save_weights_only=True,
