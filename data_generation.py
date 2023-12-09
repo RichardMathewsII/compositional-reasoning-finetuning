@@ -70,22 +70,24 @@ def generate_test_data(
             examplars = "".join(examplars)
             examplars = examplars.split("\n\n")[:-1]
 
-        self_ask_test_set = wiki_adaptor.generate_training_examples(
-            test_set, 
-            "self-ask", 
-            examplars, 
-            answer_before_rationale=answer_before_rationale,
-            randomize_fact_order=randomize_fact_order
-            )
-        
-        logger.info("Completed: generating self-ask prompt testing examples")
-        # dump self-ask fine-tuning data to json
-        logger.info("Initiating: exporting self-ask prompt testing examples to json")
-        with open(path+f"self_ask-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}.json", "w") as f:
-            json.dump(self_ask_test_set, f)
-        logger.info("Completed: exporting self-ask prompt testing examples to json")
-        # clear data files
-        del self_ask_test_set
+        for examplar_setting in [examplars, []]:
+            self_ask_test_set = wiki_adaptor.generate_training_examples(
+                test_set, 
+                "self-ask", 
+                examplar_setting, 
+                answer_before_rationale=answer_before_rationale,
+                randomize_fact_order=randomize_fact_order
+                )
+            
+            logger.info("Completed: generating self-ask prompt testing examples")
+            # dump self-ask fine-tuning data to json
+            logger.info("Initiating: exporting self-ask prompt testing examples to json")
+            examplar_setting = "wtih-examplar" if examplar_setting else "wtih-examplar"
+            with open(path+f"self_ask-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}-{examplar_setting}.json", "w") as f:
+                json.dump(self_ask_test_set, f)
+            logger.info("Completed: exporting self-ask prompt testing examples to json")
+            # clear data files
+            del self_ask_test_set
 
 
     if chain_of_thought:
@@ -96,21 +98,23 @@ def generate_test_data(
             examplars = "".join(examplars)
             examplars = examplars.split("\n\n")[:-1]
 
-        chain_of_thought_test_set = wiki_adaptor.generate_training_examples(
-            test_set, 
-            "chain-of-thought", 
-            examplars, 
-            answer_before_rationale=answer_before_rationale, 
-            randomize_fact_order=randomize_fact_order)
-        
-        logger.info("Completed: generating chain-of-thought prompt testing examples")
-        # dump chain-of-thought fine-tuning data to json
-        logger.info("Initiating: exporting chain-of-thought prompt testing examples to json")
-        with open(path+f"chain_of_thought-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}.json", "w") as f:
-            json.dump(chain_of_thought_test_set, f)
-        logger.info("Completed: exporting chain-of-thought prompt testing examples to json")
-        # clear data files
-        del chain_of_thought_test_set
+        for examplar_setting in [examplars, []]:
+            chain_of_thought_test_set = wiki_adaptor.generate_training_examples(
+                test_set, 
+                "chain-of-thought", 
+                examplars, 
+                answer_before_rationale=answer_before_rationale, 
+                randomize_fact_order=randomize_fact_order)
+            
+            logger.info("Completed: generating chain-of-thought prompt testing examples")
+            # dump chain-of-thought fine-tuning data to json
+            logger.info("Initiating: exporting chain-of-thought prompt testing examples to json")
+            examplar_setting = "wtih-examplar" if examplar_setting else "wtih-examplar"
+            with open(path+f"chain_of_thought-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}-{examplar_setting}.json", "w") as f:
+                json.dump(chain_of_thought_test_set, f)
+            logger.info("Completed: exporting chain-of-thought prompt testing examples to json")
+            # clear data files
+            del chain_of_thought_test_set
 
 
 def generate_finetuning_data(
