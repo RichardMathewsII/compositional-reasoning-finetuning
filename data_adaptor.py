@@ -1,3 +1,5 @@
+import json
+import os
 import random
 from typing import Any, Dict, List, Tuple, Union
 import re
@@ -85,7 +87,7 @@ class DataAdaptor:
                     training_examples.append(adapt_2WikiMultihopQA_to_self_ask_training_example(example, answer_before_rationale, randomize_fact_order))
             elif strategy == "direct":
                 for example in tqdm(examples, 
-                                    desc=f"Generating 2WikiMultihopQA direct randomize_fact_order={randomize_fact_order} training examples", 
+                                    desc=f"Generating 2WikiMultihopQA direct answer_before_rationale={answer_before_rationale} randomize_fact_order={randomize_fact_order} training examples", 
                                     mininterval=2.0):
                     training_examples.append(adapt_2WikiMultihopQA_to_direct_training_example(example, randomize_fact_order))
             elif strategy == "squad":
@@ -145,7 +147,8 @@ class DataAdaptor:
                 metadata = {
                     "hops": example["hops"], 
                     "type": example["type"], 
-                    "relationships": example["relationships"]
+                    "relationships": example["relationships"],
+                    "id": example["id"]
                     }
             else:
                 metadata = {}
@@ -159,8 +162,14 @@ class DataAdaptor:
         
         del training_examples
 
-        structured_training_examples = _verify_answer_in_prompt(structured_training_examples)
-        
+        if strategy == "direct" and not answer_before_rationale and not randomize_fact_order:
+            write = True
+        else:
+            write = False
+
+        structured_training_examples = filter_token_size(structured_training_examples, write=write)
+        structured_training_examples = verify_answer_in_prompt(structured_training_examples, write=write)
+
         return structured_training_examples
 
     def generate_evaluation_examples(self, examples: List[Dict[str, Any]], examplars: List[str] = [], answer_before_rationale: bool = False, randomize_fact_order: bool = False, max_examplars: int = 2) -> List[Dict[str, str]]:
@@ -451,6 +460,7 @@ def adapt_2WikiMultihopQA_to_self_ask_training_example(example: dict, answer_bef
     context = dict(example["context"])
     question_type = example["type"]
     sub_questions = _compose_2WikiMultihopQA_subquestions(evidences)
+    id = example['_id']
     
     # training example with self-ask rationale output
     # prompt engineering
@@ -486,7 +496,7 @@ def adapt_2WikiMultihopQA_to_self_ask_training_example(example: dict, answer_bef
     # remove white space at the beginning of each line
     prompt = "\n".join([line.strip() for line in prompt.split("\n")])
     target = "\n".join([line.strip() for line in target.split("\n")])
-    return {"prompt": prompt, "target": target, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences]}
+    return {"prompt": prompt, "target": target, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences], "id": id}
 
 
 def adapt_2WikiMultihopQA_to_direct_training_example(example: dict, randomize_fact_order: bool = False) -> str:
@@ -512,6 +522,7 @@ def adapt_2WikiMultihopQA_to_direct_training_example(example: dict, randomize_fa
     supporting_facts = example["supporting_facts"]
     context = dict(example["context"])
     question_type = example["type"]
+    id = example['_id']
 
     # training example with supporting facts
     facts = _compose_2WikiMultihopQA_facts(supporting_facts, context, randomize_fact_order)
@@ -523,7 +534,7 @@ def adapt_2WikiMultihopQA_to_direct_training_example(example: dict, randomize_fa
     # remove white space at the beginning of each line
     prompt = "\n".join([line.strip() for line in prompt.split("\n")])
     target = "\n".join([line.strip() for line in target.split("\n")])
-    return {"prompt": prompt, "target": target, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences]}
+    return {"prompt": prompt, "target": target, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences], "id": id}
 
 
 def adapt_2WikiMultihopQA_to_squad_example(example: dict) -> str:
@@ -549,6 +560,7 @@ def adapt_2WikiMultihopQA_to_squad_example(example: dict) -> str:
     answer = example["answer"]
     supporting_facts = example["supporting_facts"]
     context = dict(example["context"])
+    id = example['_id']
 
     # training example with supporting context
     facts = _compose_2WikiMultihopQA_SQUAD_context(supporting_facts, context)
@@ -586,6 +598,7 @@ def adapt_2WikiMultihopQA_to_chain_of_thought_training_example(example: dict, an
     context = dict(example["context"])
     question_type = example["type"]
     chain_of_thought = _compose_2WikiMultihopQA_chain_of_thought(evidences)
+    id = example['_id']
     
     # training example with chain-of-thought rationale output
     # prompt engineering
@@ -608,7 +621,7 @@ def adapt_2WikiMultihopQA_to_chain_of_thought_training_example(example: dict, an
     # remove white space at the beginning of each line
     prompt = "\n".join([line.strip() for line in prompt.split("\n")])
     target = "\n".join([line.strip() for line in target.split("\n")])
-    return {"prompt": prompt, "target": target, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences]}
+    return {"prompt": prompt, "target": target, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences], "id": id}
 
 
 def adapt_CompositionalCelebrities_to_self_ask_examplar(example: dict) -> str:
@@ -1131,7 +1144,45 @@ def _compose_StrategyQA_SQUAD_context(supporting_facts: List[str]) -> str:
     return facts
 
 
-def _extract_answer_from_target(target: str) -> str:
+def append_non_duplicated_ids(file_path, new_ids):
+    # Read existing JSON file
+    try:
+        with open(file_path, 'r') as file:
+            existing_ids = json.load(file)
+    except FileNotFoundError:
+        # If the file doesn't exist, create an empty list
+        existing_ids = []
+
+    existing_ids.extend(new_ids)
+    existing_ids = list(set(existing_ids))
+
+    # Write the updated list back to the JSON file
+    with open(file_path, 'w') as file:
+        json.dump(existing_ids, file, indent=4)
+
+
+def filter_token_size(examples: List[Dict[str, Any]], token_size: int = 130, write=False) -> List[Dict[str, Any]]:
+    
+    file_name = f'data/FinetuningData/filtered_example_ids_{token_size}.json'
+
+    if write:
+        examples = [
+            dictionary for dictionary in examples
+            if dictionary['num_prompt_tokens'] <= token_size
+        ]
+        example_ids = [example['id'] for example in examples]
+        logger.info(f'Dataset size after filtering {len(example_ids)}')
+        append_non_duplicated_ids(file_name, example_ids)
+
+    else:
+        with open(file_name, 'r') as in_file:
+            example_ids = json.load(in_file)
+        examples = [dictionary for dictionary in examples if dictionary['id'] in example_ids]
+
+    return examples
+
+
+def extract_answer_from_target(target: str) -> str:
     """
     Find the exact text of the answer given a target
     """
@@ -1150,19 +1201,30 @@ def _extract_answer_from_target(target: str) -> str:
     return result
 
 
-def _verify_answer_in_prompt(structured_training_examples: List) -> List:
+def verify_answer_in_prompt(structured_training_examples: List, write=False) -> List:
     """
     Need to verify the answers in the prompt so that the question can be answered
     """
+    file_name = f'data/FinetuningData/verified_answer_example_ids.json'
 
     filtered_training_examples = []
 
     # only keep the examples with the answer in the prompt
-    for example in structured_training_examples:
-        answer = _extract_answer_from_target(example['target'])
-        if answer is not None and (answer.lower() in example['prompt'].lower() or answer in ['yes', 'no']):
-            filtered_training_examples.append(example)
-        else:
-            logger.info(f"Answer not in prompt:\n{example['prompt']}\n{example['target']}")
+    if write:
+        for example in structured_training_examples:
+            answer = extract_answer_from_target(example['target'])
+            if answer is not None and (answer.lower() in example['prompt'].lower() or answer in ['yes', 'no']):
+                filtered_training_examples.append(example)
+            else:
+                logger.info(f"Answer not in prompt:\n{example['prompt']}\n{example['target']}")
+
+        logger.info(f'Dataset size after verifying answer in prompt {len(filtered_training_examples)}')
+        example_ids = [example['id'] for example in filtered_training_examples]
+        append_non_duplicated_ids(file_name, example_ids)
+
+    else:
+        with open(file_name, 'r') as in_file:
+            example_ids = json.load(in_file)
+        filtered_training_examples = [dictionary for dictionary in structured_training_examples if dictionary['id'] in example_ids]
 
     return filtered_training_examples

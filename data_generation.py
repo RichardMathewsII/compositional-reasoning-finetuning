@@ -13,10 +13,6 @@ with open("logs/data_generation.log", "w") as f:
 # set log file
 logger.add("logs/data_generation.log", rotation="500 MB", compression="zip")
 
-# Set the random seed
-random_seed = 42
-random.seed(random_seed)
-
 
 def train_dev_split(
         sample_size: int = -1, 
@@ -27,7 +23,12 @@ def train_dev_split(
     """
     data = load_2WikiMultihopQA(n_examples=sample_size, split='train')
 
+        
+    # Set the random seed
+    random_seed = 42
+    random.seed(random_seed)
     random.shuffle(data)
+
     dev_set = data[:dev_size]
     train_set = data[dev_size:]
     return train_set, dev_set
@@ -42,7 +43,9 @@ def generate_test_data(
         answer_before_rationale: bool = False,
         randomize_fact_order: bool = False) -> None:
 
-    test_set = load_2WikiMultihopQA(n_examples=sample_size, split='test')
+    # in the original data set the test set does not have any answers,
+    # so we need to load the original dev set to use as our test set
+    test_set = load_2WikiMultihopQA(n_examples=sample_size, split='dev')
     wiki_adaptor = DataAdaptor("2WikiMultihopQA")
     path = "data/MultihopEvaluation/"
 
@@ -67,22 +70,24 @@ def generate_test_data(
             examplars = "".join(examplars)
             examplars = examplars.split("\n\n")[:-1]
 
-        self_ask_test_set = wiki_adaptor.generate_training_examples(
-            test_set, 
-            "self-ask", 
-            examplars, 
-            answer_before_rationale=answer_before_rationale,
-            randomize_fact_order=randomize_fact_order
-            )
-        
-        logger.info("Completed: generating self-ask prompt testing examples")
-        # dump self-ask fine-tuning data to json
-        logger.info("Initiating: exporting self-ask prompt testing examples to json")
-        with open(path+f"self_ask-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}.json", "w") as f:
-            json.dump(self_ask_test_set, f)
-        logger.info("Completed: exporting self-ask prompt testing examples to json")
-        # clear data files
-        del self_ask_test_set
+        for examplar_setting in [examplars, []]:
+            self_ask_test_set = wiki_adaptor.generate_training_examples(
+                test_set, 
+                "self-ask", 
+                examplar_setting, 
+                answer_before_rationale=answer_before_rationale,
+                randomize_fact_order=randomize_fact_order
+                )
+            
+            logger.info("Completed: generating self-ask prompt testing examples")
+            # dump self-ask fine-tuning data to json
+            logger.info("Initiating: exporting self-ask prompt testing examples to json")
+            examplar_setting = "wtih-examplar" if examplar_setting else "wtih-examplar"
+            with open(path+f"self_ask-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}-{examplar_setting}.json", "w") as f:
+                json.dump(self_ask_test_set, f)
+            logger.info("Completed: exporting self-ask prompt testing examples to json")
+            # clear data files
+            del self_ask_test_set
 
 
     if chain_of_thought:
@@ -93,21 +98,23 @@ def generate_test_data(
             examplars = "".join(examplars)
             examplars = examplars.split("\n\n")[:-1]
 
-        chain_of_thought_test_set = wiki_adaptor.generate_training_examples(
-            test_set, 
-            "chain-of-thought", 
-            examplars, 
-            answer_before_rationale=answer_before_rationale, 
-            randomize_fact_order=randomize_fact_order)
-        
-        logger.info("Completed: generating chain-of-thought prompt testing examples")
-        # dump chain-of-thought fine-tuning data to json
-        logger.info("Initiating: exporting chain-of-thought prompt testing examples to json")
-        with open(path+f"chain_of_thought-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}.json", "w") as f:
-            json.dump(chain_of_thought_test_set, f)
-        logger.info("Completed: exporting chain-of-thought prompt testing examples to json")
-        # clear data files
-        del chain_of_thought_test_set
+        for examplar_setting in [examplars, []]:
+            chain_of_thought_test_set = wiki_adaptor.generate_training_examples(
+                test_set, 
+                "chain-of-thought", 
+                examplars, 
+                answer_before_rationale=answer_before_rationale, 
+                randomize_fact_order=randomize_fact_order)
+            
+            logger.info("Completed: generating chain-of-thought prompt testing examples")
+            # dump chain-of-thought fine-tuning data to json
+            logger.info("Initiating: exporting chain-of-thought prompt testing examples to json")
+            examplar_setting = "wtih-examplar" if examplar_setting else "wtih-examplar"
+            with open(path+f"chain_of_thought-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}-{examplar_setting}.json", "w") as f:
+                json.dump(chain_of_thought_test_set, f)
+            logger.info("Completed: exporting chain-of-thought prompt testing examples to json")
+            # clear data files
+            del chain_of_thought_test_set
 
 
 def generate_finetuning_data(
@@ -132,7 +139,7 @@ def generate_finetuning_data(
     wiki_adaptor = DataAdaptor("2WikiMultihopQA")
     path = "data/FinetuningData/"
     
-    if direct:
+    if direct and not randomize_fact_order:
         logger.info("Initiating: generating direct prompt training examples")
         # write train and dev files for direct prompt fine-tuning
         direct_train_set = wiki_adaptor.generate_training_examples(train_set[n_examplars:], "direct", randomize_fact_order=randomize_fact_order)
@@ -212,8 +219,8 @@ def generate_finetuning_data(
 
 if __name__ == "__main__":
 
-    for randomize_fact_order in [True, False]:
-        for answer_before_rationale in [True, False]:
+    for randomize_fact_order in [False, True]:
+        for answer_before_rationale in [False, True]:
             
             # we are not doing this combination
             if randomize_fact_order and answer_before_rationale:

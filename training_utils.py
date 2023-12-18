@@ -77,17 +77,23 @@ class MultihopQADataGenerator(tf.keras.utils.Sequence):
         self.max_length = max_length
         self.batch_size = batch_size
         self.shuffle = shuffle
+        self.first_batch = first_batch
 
-        # useful for resuming from the middle of a checkpoint
-        first_batch_start = first_batch * self.batch_size
-        self.df = pd.read_json(self.data_filename).iloc[first_batch_start:]
+        self.df = pd.read_json(self.data_filename)
         self.n_examples = len(self.df)
         
-        # Initialize row order, call on_epoch_end to shuffle row indices
+        # Initialize row order
         self.row_order = np.arange(1, self.n_examples+1)
         np.random.seed(0)
         if self.shuffle:
             self.row_order = list(np.random.permutation(self.row_order))
+
+        # useful for resuming from the middle of a checkpoint
+        if self.first_batch != 0:
+            first_batch_start = first_batch * self.batch_size
+            self.row_order = self.row_order[first_batch_start:]
+            self.df = self.df.iloc[first_batch_start:]
+            self.n_examples = len(self.df)
 
     def __len__(self):
         # Return the number of batches in the full dataset
@@ -179,6 +185,8 @@ def finetune_self_ask(model_name, train_file, valid_file, checkpoint_filepath, m
     if previous_checkpoint != "":
         model_wrapper.load_weights(previous_checkpoint)
         first_batch = int(re.search(r'weights\.(\d+)-(\d+)\.hdf5', previous_checkpoint).group(2))
+    else:
+        first_batch = 0
 
     train_data_generator = MultihopQADataGenerator(
         tokenizer=t5_tokenizer,
