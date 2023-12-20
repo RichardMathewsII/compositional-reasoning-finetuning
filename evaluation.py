@@ -156,12 +156,24 @@ def load_model(config: EvaluationConfig) -> Any:
     '''Loads a model object.'''
     model = config.model
     strategy = config.strategy
-    id = config.id
+    id = config.id.split('-')[:-2] # models were not trained without exemplars so get rid of that part of the id
+    id = '-'.join(id)
     max_length = config.max_length
     
     # for t5 and flan-t5
-    if 't5' in model and strategy != 'baseline':
+    if 'flan-t5' in model and strategy != 'baseline':
         t5_model = TFT5ForConditionalGeneration.from_pretrained(f"google/{model}")
+        keras_model = build_t5_training_wrapper_model(t5_model, max_length=max_length)
+        path = f"models/{model}-{id}.h5"
+        logger.info("Loading finetuned model weights from: {path}", path=path)
+        keras_model.load_weights(path)
+        return t5_model
+    elif 'flan-t5' in model and strategy == 'baseline':
+        path = "google/flan-t5-small"
+        logger.info("Loading raw model from: {path}", path=path)
+        return TFT5ForConditionalGeneration.from_pretrained(path)
+    if 't5' in model and strategy != 'baseline':
+        t5_model = TFT5ForConditionalGeneration.from_pretrained(f"{model}")
         keras_model = build_t5_training_wrapper_model(t5_model, max_length=max_length)
         path = f"models/{model}-{id}.h5"
         logger.info("Loading finetuned model weights from: {path}", path=path)
@@ -483,6 +495,7 @@ def store_processed_targets(config: EvaluationConfig, answers: List[str], target
 
 
 if __name__ == "__main__":
+    # usage python evaluation.py  --model='t5-small' --strategy='chain_of_thought' --no-examplars --no-answer_first --no-random_facts --no-load_checkpoint  --size=1000
     # clear contents of log file
     with open("logs/evaluation.log", "w") as f:
         pass

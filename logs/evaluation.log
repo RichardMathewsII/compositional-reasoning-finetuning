@@ -1,13 +1,10 @@
-2023-07-23 00:58:23.036 | DEBUG    | __main__:<module>:515 - Examplars parameter -> True
-2023-07-23 00:58:23.038 | DEBUG    | __main__:<module>:516 - Checkpoint loader parameter -> True
-2023-07-23 00:58:23.039 | INFO     | __main__:_set_t5_tokenizer:111 - Loading tokenizer google/flan-t5-small with max length of 530
-2023-07-23 00:58:24.039 | INFO     | __main__:<module>:522 - Test set pointing to file: data/MultihopEvaluation/self-ask-with-examplars.json
-2023-07-23 00:58:24.040 | INFO     | __main__:<module>:523 - Responses will be saved to: results/flan-t5-small-self-ask-with-examplars-responses.json
-2023-07-23 00:58:24.040 | INFO     | __main__:<module>:524 - Results will be saved to: results/flan-t5-small-self-ask-with-examplars-results.json
-2023-07-23 00:58:25.165 | INFO     | __main__:<module>:536 - Loading flan-t5-small-self-ask model
-2023-07-23 00:58:45.608 | INFO     | __main__:load_model:141 - Loading finetuned model weights from: models/flan-t5-small-self-ask.h5
-2023-07-23 00:58:50.037 | INFO     | __main__:load_progress:441 - Continuing from evaluation checkpoint... starting at example 3500
-2023-07-23 00:58:50.446 | INFO     | __main__:<module>:541 - Collecting model responses...
-2023-07-23 02:02:00.731 | INFO     | __main__:<module>:571 - done
-2023-07-23 02:02:00.754 | INFO     | __main__:<module>:578 - Computing results...
-2023-07-23 02:02:31.960 | INFO     | __main__:<module>:585 - done
+2023-12-20 16:16:35.895 | DEBUG    | __main__:<module>:543 - Examplars parameter -> False
+2023-12-20 16:16:35.896 | DEBUG    | __main__:<module>:544 - Checkpoint loader parameter -> False
+2023-12-20 16:16:35.896 | INFO     | __main__:_set_t5_tokenizer:124 - Loading tokenizer t5-small with max length of 300
+2023-12-20 16:16:36.179 | INFO     | __main__:<module>:550 - Test set pointing to file: data/MultihopEvaluation/chain_of_thought-answer_first=False-random_facts=False-without-examplars.json
+2023-12-20 16:16:36.180 | INFO     | __main__:<module>:551 - Responses will be saved to: results/chain_of_thought-answer_first=False-random_facts=False-without-examplars-responses.json
+2023-12-20 16:16:36.180 | INFO     | __main__:<module>:552 - Results will be saved to: results/chain_of_thought-answer_first=False-random_facts=False-without-examplars-results.json
+2023-12-20 16:16:36.180 | INFO     | __main__:<module>:564 - Loading t5-small model
+2023-12-20 16:16:41.784 | INFO     | __main__:load_model:179 - Loading finetuned model weights from: models/t5-small-chain_of_thought-answer_first=False-random_facts=False.h5
+2023-12-20 16:16:42.083 | INFO     | __main__:load_progress:474 - No existing progress detected... starting from scratch.
+2023-12-20 16:16:42.083 | INFO     | __main__:<module>:569 - Collecting model responses...
