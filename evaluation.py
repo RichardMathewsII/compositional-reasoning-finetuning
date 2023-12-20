@@ -495,7 +495,7 @@ def store_processed_targets(config: EvaluationConfig, answers: List[str], target
 
 
 if __name__ == "__main__":
-    # usage python evaluation.py  --model='t5-small' --strategy='chain_of_thought' --no-examplars --no-answer_first --no-random_facts --no-load_checkpoint  --size=1000
+    # usage python evaluation.py  --model='t5-small' --strategy='chain_of_thought' --no-examplars --no-answer_first --no-random_facts --no-load_checkpoint  --size=20 --batch_size=10
     # clear contents of log file
     with open("logs/evaluation.log", "w") as f:
         pass
@@ -615,7 +615,8 @@ if __name__ == "__main__":
     results = {
         'model': config.model, 
         'strategy': config.strategy,
-        # "finetuning": config.finetuning_status_, 
+        'answer_first': config.answer_first,
+        'random_facts': config.random_facts,
         'examplars': config.examplars, 
         'micro_results': micro_results, 
         'macro_results': macro_results}
