@@ -1,107 +1,58 @@
-2023-12-08 16:59:44.264 | INFO     | __main__:generate_finetuning_data:134 - Initiating: data generation
-2023-12-08 16:59:44.264 | INFO     | __main__:generate_finetuning_data:135 - Initiating: train-dev split
-2023-12-08 16:59:51.129 | INFO     | __main__:generate_finetuning_data:137 - Completed: train-dev split
-2023-12-08 16:59:51.130 | INFO     | __main__:generate_finetuning_data:143 - Initiating: generating direct prompt training examples
-2023-12-08 17:00:40.793 | INFO     | data_adaptor:filter_token_size:1174 - Dataset size after filtering 106290
-2023-12-08 17:00:41.152 | INFO     | data_adaptor:verify_answer_in_prompt:1221 - Dataset size after verifying answer in prompt 106290
-2023-12-08 17:00:44.990 | INFO     | data_adaptor:filter_token_size:1174 - Dataset size after filtering 8733
-2023-12-08 17:00:45.083 | INFO     | data_adaptor:verify_answer_in_prompt:1221 - Dataset size after verifying answer in prompt 8733
-2023-12-08 17:00:45.156 | INFO     | __main__:generate_finetuning_data:147 - Completed: generating direct prompt training examples
-2023-12-08 17:00:45.156 | INFO     | __main__:generate_finetuning_data:149 - Initiating: exporting direct prompt training examples to json
-2023-12-08 17:00:46.462 | INFO     | __main__:generate_finetuning_data:154 - Completed: exporting direct prompt training examples to json
-2023-12-08 17:00:46.624 | INFO     | __main__:generate_finetuning_data:160 - Initiating: generating self-ask prompt training examples
-2023-12-08 17:28:24.212 | INFO     | __main__:generate_finetuning_data:183 - Completed: generating self-ask prompt training examples
-2023-12-08 17:28:24.215 | INFO     | __main__:generate_finetuning_data:185 - Initiating: exporting self-ask prompt training examples to json
-2023-12-08 17:28:26.927 | INFO     | __main__:generate_finetuning_data:190 - Completed: exporting self-ask prompt training examples to json
-2023-12-08 17:28:27.045 | INFO     | __main__:generate_finetuning_data:196 - Initiating: generating chain-of-thought prompt training examples
-2023-12-08 17:35:24.476 | INFO     | __main__:generate_finetuning_data:207 - Completed: generating chain-of-thought prompt training examples
-2023-12-08 17:35:24.479 | INFO     | __main__:generate_finetuning_data:209 - Initiating: exporting chain-of-thought prompt training examples to json
-2023-12-08 17:35:26.775 | INFO     | __main__:generate_finetuning_data:214 - Completed: exporting chain-of-thought prompt training examples to json
-2023-12-08 17:35:28.455 | INFO     | __main__:generate_test_data:53 - Initiating: generating direct prompt testing examples
-2023-12-08 17:35:32.010 | INFO     | data_adaptor:filter_token_size:1174 - Dataset size after filtering 8354
-2023-12-08 17:35:32.096 | INFO     | data_adaptor:verify_answer_in_prompt:1221 - Dataset size after verifying answer in prompt 8354
-2023-12-08 17:35:32.161 | INFO     | __main__:generate_test_data:56 - Completed: generating direct prompt testing examples
-2023-12-08 17:35:32.161 | INFO     | __main__:generate_test_data:58 - Initiating: exporting direct prompt testing examples to json
-2023-12-08 17:35:32.247 | INFO     | __main__:generate_test_data:61 - Completed: exporting direct prompt testing examples to json
-2023-12-08 17:35:32.250 | INFO     | __main__:generate_test_data:66 - Initiating: generating self-ask prompt testing examples
-2023-12-08 17:37:35.503 | INFO     | __main__:generate_test_data:82 - Completed: generating self-ask prompt testing examples
-2023-12-08 17:37:35.504 | INFO     | __main__:generate_test_data:84 - Initiating: exporting self-ask prompt testing examples to json
-2023-12-08 17:37:35.648 | INFO     | __main__:generate_test_data:88 - Completed: exporting self-ask prompt testing examples to json
-2023-12-08 17:39:37.017 | INFO     | __main__:generate_test_data:82 - Completed: generating self-ask prompt testing examples
-2023-12-08 17:39:37.019 | INFO     | __main__:generate_test_data:84 - Initiating: exporting self-ask prompt testing examples to json
-2023-12-08 17:39:37.127 | INFO     | __main__:generate_test_data:88 - Completed: exporting self-ask prompt testing examples to json
-2023-12-08 17:39:37.132 | INFO     | __main__:generate_test_data:94 - Initiating: generating chain-of-thought prompt testing examples
-2023-12-08 17:40:08.689 | INFO     | __main__:generate_test_data:109 - Completed: generating chain-of-thought prompt testing examples
-2023-12-08 17:40:08.690 | INFO     | __main__:generate_test_data:111 - Initiating: exporting chain-of-thought prompt testing examples to json
-2023-12-08 17:40:08.874 | INFO     | __main__:generate_test_data:115 - Completed: exporting chain-of-thought prompt testing examples to json
-2023-12-08 17:40:40.134 | INFO     | __main__:generate_test_data:109 - Completed: generating chain-of-thought prompt testing examples
-2023-12-08 17:40:40.137 | INFO     | __main__:generate_test_data:111 - Initiating: exporting chain-of-thought prompt testing examples to json
-2023-12-08 17:40:40.303 | INFO     | __main__:generate_test_data:115 - Completed: exporting chain-of-thought prompt testing examples to json
-2023-12-08 17:40:40.399 | INFO     | __main__:generate_finetuning_data:134 - Initiating: data generation
-2023-12-08 17:40:40.400 | INFO     | __main__:generate_finetuning_data:135 - Initiating: train-dev split
-2023-12-08 17:40:47.299 | INFO     | __main__:generate_finetuning_data:137 - Completed: train-dev split
-2023-12-08 17:40:47.300 | INFO     | __main__:generate_finetuning_data:143 - Initiating: generating direct prompt training examples
-2023-12-08 17:41:36.635 | INFO     | data_adaptor:filter_token_size:1174 - Dataset size after filtering 106290
-2023-12-08 17:41:37.001 | INFO     | data_adaptor:verify_answer_in_prompt:1221 - Dataset size after verifying answer in prompt 106290
-2023-12-08 17:41:45.970 | INFO     | data_adaptor:filter_token_size:1174 - Dataset size after filtering 8733
-2023-12-08 17:41:46.093 | INFO     | data_adaptor:verify_answer_in_prompt:1221 - Dataset size after verifying answer in prompt 8733
-2023-12-08 17:41:46.167 | INFO     | __main__:generate_finetuning_data:147 - Completed: generating direct prompt training examples
-2023-12-08 17:41:46.167 | INFO     | __main__:generate_finetuning_data:149 - Initiating: exporting direct prompt training examples to json
-2023-12-08 17:41:48.113 | INFO     | __main__:generate_finetuning_data:154 - Completed: exporting direct prompt training examples to json
-2023-12-08 17:41:48.175 | INFO     | __main__:generate_finetuning_data:160 - Initiating: generating self-ask prompt training examples
-2023-12-08 18:09:24.951 | INFO     | __main__:generate_finetuning_data:183 - Completed: generating self-ask prompt training examples
-2023-12-08 18:09:24.954 | INFO     | __main__:generate_finetuning_data:185 - Initiating: exporting self-ask prompt training examples to json
-2023-12-08 18:09:29.719 | INFO     | __main__:generate_finetuning_data:190 - Completed: exporting self-ask prompt training examples to json
-2023-12-08 18:09:31.039 | INFO     | __main__:generate_finetuning_data:196 - Initiating: generating chain-of-thought prompt training examples
-2023-12-08 18:16:22.011 | INFO     | __main__:generate_finetuning_data:207 - Completed: generating chain-of-thought prompt training examples
-2023-12-08 18:16:22.014 | INFO     | __main__:generate_finetuning_data:209 - Initiating: exporting chain-of-thought prompt training examples to json
-2023-12-08 18:16:24.135 | INFO     | __main__:generate_finetuning_data:214 - Completed: exporting chain-of-thought prompt training examples to json
-2023-12-08 18:16:25.648 | INFO     | __main__:generate_test_data:53 - Initiating: generating direct prompt testing examples
-2023-12-08 18:16:29.134 | INFO     | data_adaptor:filter_token_size:1174 - Dataset size after filtering 8354
-2023-12-08 18:16:29.226 | INFO     | data_adaptor:verify_answer_in_prompt:1221 - Dataset size after verifying answer in prompt 8354
-2023-12-08 18:16:29.294 | INFO     | __main__:generate_test_data:56 - Completed: generating direct prompt testing examples
-2023-12-08 18:16:29.294 | INFO     | __main__:generate_test_data:58 - Initiating: exporting direct prompt testing examples to json
-2023-12-08 18:16:29.379 | INFO     | __main__:generate_test_data:61 - Completed: exporting direct prompt testing examples to json
-2023-12-08 18:16:29.382 | INFO     | __main__:generate_test_data:66 - Initiating: generating self-ask prompt testing examples
-2023-12-08 18:18:19.925 | INFO     | __main__:generate_test_data:82 - Completed: generating self-ask prompt testing examples
-2023-12-08 18:18:19.928 | INFO     | __main__:generate_test_data:84 - Initiating: exporting self-ask prompt testing examples to json
-2023-12-08 18:18:20.080 | INFO     | __main__:generate_test_data:88 - Completed: exporting self-ask prompt testing examples to json
-2023-12-08 18:20:09.015 | INFO     | __main__:generate_test_data:82 - Completed: generating self-ask prompt testing examples
-2023-12-08 18:20:09.018 | INFO     | __main__:generate_test_data:84 - Initiating: exporting self-ask prompt testing examples to json
-2023-12-08 18:20:09.179 | INFO     | __main__:generate_test_data:88 - Completed: exporting self-ask prompt testing examples to json
-2023-12-08 18:20:09.185 | INFO     | __main__:generate_test_data:94 - Initiating: generating chain-of-thought prompt testing examples
-2023-12-08 18:20:37.848 | INFO     | __main__:generate_test_data:109 - Completed: generating chain-of-thought prompt testing examples
-2023-12-08 18:20:37.849 | INFO     | __main__:generate_test_data:111 - Initiating: exporting chain-of-thought prompt testing examples to json
-2023-12-08 18:20:37.981 | INFO     | __main__:generate_test_data:115 - Completed: exporting chain-of-thought prompt testing examples to json
-2023-12-08 18:21:06.863 | INFO     | __main__:generate_test_data:109 - Completed: generating chain-of-thought prompt testing examples
-2023-12-08 18:21:06.865 | INFO     | __main__:generate_test_data:111 - Initiating: exporting chain-of-thought prompt testing examples to json
-2023-12-08 18:21:06.984 | INFO     | __main__:generate_test_data:115 - Completed: exporting chain-of-thought prompt testing examples to json
-2023-12-08 18:21:07.080 | INFO     | __main__:generate_finetuning_data:134 - Initiating: data generation
-2023-12-08 18:21:07.080 | INFO     | __main__:generate_finetuning_data:135 - Initiating: train-dev split
-2023-12-08 18:21:17.952 | INFO     | __main__:generate_finetuning_data:137 - Completed: train-dev split
-2023-12-08 18:21:17.956 | INFO     | __main__:generate_finetuning_data:160 - Initiating: generating self-ask prompt training examples
-2023-12-08 18:45:13.225 | INFO     | __main__:generate_finetuning_data:183 - Completed: generating self-ask prompt training examples
-2023-12-08 18:45:13.228 | INFO     | __main__:generate_finetuning_data:185 - Initiating: exporting self-ask prompt training examples to json
-2023-12-08 18:45:15.775 | INFO     | __main__:generate_finetuning_data:190 - Completed: exporting self-ask prompt training examples to json
-2023-12-08 18:45:15.876 | INFO     | __main__:generate_finetuning_data:196 - Initiating: generating chain-of-thought prompt training examples
-2023-12-08 18:51:45.420 | INFO     | __main__:generate_finetuning_data:207 - Completed: generating chain-of-thought prompt training examples
-2023-12-08 18:51:45.423 | INFO     | __main__:generate_finetuning_data:209 - Initiating: exporting chain-of-thought prompt training examples to json
-2023-12-08 18:51:47.566 | INFO     | __main__:generate_finetuning_data:214 - Completed: exporting chain-of-thought prompt training examples to json
-2023-12-08 18:51:49.283 | INFO     | __main__:generate_test_data:53 - Initiating: generating direct prompt testing examples
-2023-12-08 18:52:14.751 | INFO     | __main__:generate_test_data:56 - Completed: generating direct prompt testing examples
-2023-12-08 18:52:14.753 | INFO     | __main__:generate_test_data:58 - Initiating: exporting direct prompt testing examples to json
-2023-12-08 18:52:14.835 | INFO     | __main__:generate_test_data:61 - Completed: exporting direct prompt testing examples to json
-2023-12-08 18:52:14.838 | INFO     | __main__:generate_test_data:66 - Initiating: generating self-ask prompt testing examples
-2023-12-08 18:54:03.567 | INFO     | __main__:generate_test_data:82 - Completed: generating self-ask prompt testing examples
-2023-12-08 18:54:03.569 | INFO     | __main__:generate_test_data:84 - Initiating: exporting self-ask prompt testing examples to json
-2023-12-08 18:54:03.691 | INFO     | __main__:generate_test_data:88 - Completed: exporting self-ask prompt testing examples to json
-2023-12-08 18:55:48.628 | INFO     | __main__:generate_test_data:82 - Completed: generating self-ask prompt testing examples
-2023-12-08 18:55:48.632 | INFO     | __main__:generate_test_data:84 - Initiating: exporting self-ask prompt testing examples to json
-2023-12-08 18:55:48.752 | INFO     | __main__:generate_test_data:88 - Completed: exporting self-ask prompt testing examples to json
-2023-12-08 18:55:48.756 | INFO     | __main__:generate_test_data:94 - Initiating: generating chain-of-thought prompt testing examples
-2023-12-08 18:56:17.235 | INFO     | __main__:generate_test_data:109 - Completed: generating chain-of-thought prompt testing examples
-2023-12-08 18:56:17.238 | INFO     | __main__:generate_test_data:111 - Initiating: exporting chain-of-thought prompt testing examples to json
-2023-12-08 18:56:17.361 | INFO     | __main__:generate_test_data:115 - Completed: exporting chain-of-thought prompt testing examples to json
-2023-12-08 18:56:46.149 | INFO     | __main__:generate_test_data:109 - Completed: generating chain-of-thought prompt testing examples
-2023-12-08 18:56:46.151 | INFO     | __main__:generate_test_data:111 - Initiating: exporting chain-of-thought prompt testing examples to json
-2023-12-08 18:56:46.259 | INFO     | __main__:generate_test_data:115 - Completed: exporting chain-of-thought prompt testing examples to json
+2023-12-19 18:12:32.906 | INFO     | __main__:generate_test_data:53 - Initiating: generating direct prompt testing examples
+2023-12-19 18:12:36.512 | INFO     | data_adaptor:filter_token_size:1174 - Dataset size after filtering 8354
+2023-12-19 18:12:36.619 | INFO     | data_adaptor:verify_answer_in_prompt:1221 - Dataset size after verifying answer in prompt 8354
+2023-12-19 18:12:36.708 | INFO     | __main__:generate_test_data:56 - Completed: generating direct prompt testing examples
+2023-12-19 18:12:36.708 | INFO     | __main__:generate_test_data:58 - Initiating: exporting direct prompt testing examples to json
+2023-12-19 18:12:36.804 | INFO     | __main__:generate_test_data:61 - Completed: exporting direct prompt testing examples to json
+2023-12-19 18:12:36.807 | INFO     | __main__:generate_test_data:66 - Initiating: generating self-ask prompt testing examples
+2023-12-19 18:14:33.887 | INFO     | __main__:generate_test_data:82 - Completed: generating self-ask prompt testing examples
+2023-12-19 18:14:33.890 | INFO     | __main__:generate_test_data:84 - Initiating: exporting self-ask prompt testing examples to json
+2023-12-19 18:14:34.046 | INFO     | __main__:generate_test_data:88 - Completed: exporting self-ask prompt testing examples to json
+2023-12-19 18:16:25.913 | INFO     | __main__:generate_test_data:82 - Completed: generating self-ask prompt testing examples
+2023-12-19 18:16:25.916 | INFO     | __main__:generate_test_data:84 - Initiating: exporting self-ask prompt testing examples to json
+2023-12-19 18:16:26.032 | INFO     | __main__:generate_test_data:88 - Completed: exporting self-ask prompt testing examples to json
+2023-12-19 18:16:26.037 | INFO     | __main__:generate_test_data:94 - Initiating: generating chain-of-thought prompt testing examples
+2023-12-19 18:16:55.053 | INFO     | __main__:generate_test_data:109 - Completed: generating chain-of-thought prompt testing examples
+2023-12-19 18:16:55.055 | INFO     | __main__:generate_test_data:111 - Initiating: exporting chain-of-thought prompt testing examples to json
+2023-12-19 18:16:55.226 | INFO     | __main__:generate_test_data:115 - Completed: exporting chain-of-thought prompt testing examples to json
+2023-12-19 18:17:23.949 | INFO     | __main__:generate_test_data:109 - Completed: generating chain-of-thought prompt testing examples
+2023-12-19 18:17:23.951 | INFO     | __main__:generate_test_data:111 - Initiating: exporting chain-of-thought prompt testing examples to json
+2023-12-19 18:17:24.094 | INFO     | __main__:generate_test_data:115 - Completed: exporting chain-of-thought prompt testing examples to json
+2023-12-19 18:17:24.774 | INFO     | __main__:generate_test_data:53 - Initiating: generating direct prompt testing examples
+2023-12-19 18:17:28.216 | INFO     | data_adaptor:filter_token_size:1174 - Dataset size after filtering 8354
+2023-12-19 18:17:28.314 | INFO     | data_adaptor:verify_answer_in_prompt:1221 - Dataset size after verifying answer in prompt 8354
+2023-12-19 18:17:28.379 | INFO     | __main__:generate_test_data:56 - Completed: generating direct prompt testing examples
+2023-12-19 18:17:28.379 | INFO     | __main__:generate_test_data:58 - Initiating: exporting direct prompt testing examples to json
+2023-12-19 18:17:28.471 | INFO     | __main__:generate_test_data:61 - Completed: exporting direct prompt testing examples to json
+2023-12-19 18:17:28.475 | INFO     | __main__:generate_test_data:66 - Initiating: generating self-ask prompt testing examples
+2023-12-19 18:19:24.367 | INFO     | __main__:generate_test_data:82 - Completed: generating self-ask prompt testing examples
+2023-12-19 18:19:24.369 | INFO     | __main__:generate_test_data:84 - Initiating: exporting self-ask prompt testing examples to json
+2023-12-19 18:19:24.534 | INFO     | __main__:generate_test_data:88 - Completed: exporting self-ask prompt testing examples to json
+2023-12-19 18:21:16.534 | INFO     | __main__:generate_test_data:82 - Completed: generating self-ask prompt testing examples
+2023-12-19 18:21:16.537 | INFO     | __main__:generate_test_data:84 - Initiating: exporting self-ask prompt testing examples to json
+2023-12-19 18:21:16.640 | INFO     | __main__:generate_test_data:88 - Completed: exporting self-ask prompt testing examples to json
+2023-12-19 18:21:16.644 | INFO     | __main__:generate_test_data:94 - Initiating: generating chain-of-thought prompt testing examples
+2023-12-19 18:21:45.947 | INFO     | __main__:generate_test_data:109 - Completed: generating chain-of-thought prompt testing examples
+2023-12-19 18:21:45.950 | INFO     | __main__:generate_test_data:111 - Initiating: exporting chain-of-thought prompt testing examples to json
+2023-12-19 18:21:46.174 | INFO     | __main__:generate_test_data:115 - Completed: exporting chain-of-thought prompt testing examples to json
+2023-12-19 18:22:16.069 | INFO     | __main__:generate_test_data:109 - Completed: generating chain-of-thought prompt testing examples
+2023-12-19 18:22:16.071 | INFO     | __main__:generate_test_data:111 - Initiating: exporting chain-of-thought prompt testing examples to json
+2023-12-19 18:22:16.182 | INFO     | __main__:generate_test_data:115 - Completed: exporting chain-of-thought prompt testing examples to json
+2023-12-19 18:22:16.727 | INFO     | __main__:generate_test_data:53 - Initiating: generating direct prompt testing examples
+2023-12-19 18:22:42.705 | INFO     | __main__:generate_test_data:56 - Completed: generating direct prompt testing examples
+2023-12-19 18:22:42.708 | INFO     | __main__:generate_test_data:58 - Initiating: exporting direct prompt testing examples to json
+2023-12-19 18:22:42.801 | INFO     | __main__:generate_test_data:61 - Completed: exporting direct prompt testing examples to json
+2023-12-19 18:22:42.804 | INFO     | __main__:generate_test_data:66 - Initiating: generating self-ask prompt testing examples
+2023-12-19 18:24:39.468 | INFO     | __main__:generate_test_data:82 - Completed: generating self-ask prompt testing examples
+2023-12-19 18:24:39.471 | INFO     | __main__:generate_test_data:84 - Initiating: exporting self-ask prompt testing examples to json
+2023-12-19 18:24:39.611 | INFO     | __main__:generate_test_data:88 - Completed: exporting self-ask prompt testing examples to json
+2023-12-19 18:26:31.425 | INFO     | __main__:generate_test_data:82 - Completed: generating self-ask prompt testing examples
+2023-12-19 18:26:31.427 | INFO     | __main__:generate_test_data:84 - Initiating: exporting self-ask prompt testing examples to json
+2023-12-19 18:26:31.552 | INFO     | __main__:generate_test_data:88 - Completed: exporting self-ask prompt testing examples to json
+2023-12-19 18:26:31.556 | INFO     | __main__:generate_test_data:94 - Initiating: generating chain-of-thought prompt testing examples
+2023-12-19 18:27:00.588 | INFO     | __main__:generate_test_data:109 - Completed: generating chain-of-thought prompt testing examples
+2023-12-19 18:27:00.590 | INFO     | __main__:generate_test_data:111 - Initiating: exporting chain-of-thought prompt testing examples to json
+2023-12-19 18:27:00.702 | INFO     | __main__:generate_test_data:115 - Completed: exporting chain-of-thought prompt testing examples to json
+2023-12-19 18:27:29.799 | INFO     | __main__:generate_test_data:109 - Completed: generating chain-of-thought prompt testing examples
+2023-12-19 18:27:29.801 | INFO     | __main__:generate_test_data:111 - Initiating: exporting chain-of-thought prompt testing examples to json
+2023-12-19 18:27:29.939 | INFO     | __main__:generate_test_data:115 - Completed: exporting chain-of-thought prompt testing examples to json

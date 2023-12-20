@@ -67,10 +67,13 @@ from peft import PeftModel, PeftConfig
 class EvaluationConfig(object):
     """Configures evaluation workflow."""
     model: str
+    strategy: str
     examplars: bool  # whether to include examplars in prompt
+    answer_first: bool
+    random_facts: bool
     data_path: str
     results_path: str
-    max_length: int = 300
+    max_length: int = 300    
     create_tokenizer: bool = True
     
     def __post_init__(self):
@@ -79,34 +82,33 @@ class EvaluationConfig(object):
                 self._set_t5_tokenizer()
             elif "opt"  in self.model:
                 self._set_opt_tokenizer()
+            else:
+                raise ValueError("Model not found")
+        
         # set examplar status
         if self.examplars:
             self.examplar_status_ = "with-examplars"
         else:
             self.examplar_status_ = "without-examplars"
-        # set finetuning status
-        if "self-ask" in self.model:
-            self.finetuning_status_ = "self-ask"
-        elif "direct" in self.model:
-            self.finetuning_status_ = "direct"
-        else:
-            self.finetuning_status_ = "baseline"
+        
+        self.id = f"{self.strategy}-answer_first={self.answer_first}-random_facts={self.random_facts}-{self.examplar_status_}"
     
     def generate_test_set_file(self) -> str:
-        if self.finetuning_status_ == "direct" and self.examplar_status_ == "with-examplars":
+        # TODO discuss
+        if self.strategy == "direct" and self.examplar_status_ == "with-examplars":
             # same dataset as self-ask with examplars
-            return f"{self.data_path}self-ask-with-examplars.json"
+            return f"{self.data_path}self_ask-answer_first={self.answer_first}-random_facts={self.random_facts}-{self.examplar_status_}.json"
         else:
-            return f"{self.data_path}{self.finetuning_status_}-{self.examplar_status_}.json"
+            return f"{self.data_path}{self.id}.json"
     
     def generate_responses_file(self) -> str:
-        return f"{self.results_path}{self.model}-{self.examplar_status_}-responses.json"
+        return f"{self.results_path}{self.id}-responses.json"
     
     def generate_results_file(self) -> str:
-        return f"{self.results_path}{self.model}-{self.examplar_status_}-results.json"
+        return f"{self.results_path}{self.id}-results.json"
     
     def generate_processed_targets_file(self) -> str:
-        return f"{self.data_path}{self.finetuning_status_}-{self.examplar_status_}-targets.json"
+        return f"{self.data_path}{self.id}-targets.json"
 
     def _set_t5_tokenizer(self):
         if "flan-t5-small" in self.model:
@@ -153,56 +155,29 @@ class EvaluationConfig(object):
 def load_model(config: EvaluationConfig) -> Any:
     '''Loads a model object.'''
     model = config.model
+    strategy = config.strategy
+    id = config.id
     max_length = config.max_length
-    if model == 'flan-t5-small-self-ask':
-        t5_model = TFT5ForConditionalGeneration.from_pretrained("google/flan-t5-small")
+    
+    # for t5 and flan-t5
+    if 't5' in model and strategy != 'baseline':
+        t5_model = TFT5ForConditionalGeneration.from_pretrained(f"google/{model}")
         keras_model = build_t5_training_wrapper_model(t5_model, max_length=max_length)
-        path = f"models/{model}.h5"
+        path = f"models/{model}-{id}.h5"
         logger.info("Loading finetuned model weights from: {path}", path=path)
         keras_model.load_weights(path)
         return t5_model
-    if model == 'flan-t5-small-direct':
-        t5_model = TFT5ForConditionalGeneration.from_pretrained("google/flan-t5-small")
-        keras_model = build_t5_training_wrapper_model(t5_model, max_length=max_length)
-        path = f"models/{model}.h5"
-        logger.info("Loading finetuned model weights from: {path}", path=path)
-        keras_model.load_weights(path)
-        return t5_model
-    if model == 't5-small-self-ask':
-        t5_model = TFT5ForConditionalGeneration.from_pretrained("t5-small")
-        keras_model = build_t5_training_wrapper_model(t5_model, max_length=max_length)
-        path = f"models/{model}.h5"
-        logger.info("Loading finetuned model weights from: {path}", path=path)
-        keras_model.load_weights(path)
-        return t5_model
-    if model == 't5-small-direct':
-        t5_model = TFT5ForConditionalGeneration.from_pretrained("t5-small")
-        keras_model = build_t5_training_wrapper_model(t5_model, max_length=max_length)
-        path = f"models/{model}.h5"
-        logger.info("Loading finetuned model weights from: {path}", path=path)
-        keras_model.load_weights(path)
-        return t5_model
-    elif model == 'flan-t5-small':
-        path = "google/flan-t5-small"
-        logger.info("Loading raw model from: {path}", path=path)
-        return TFT5ForConditionalGeneration.from_pretrained(path)
-    elif model == 't5-small':
+    elif 't5' in model and strategy == 'baseline':
         path = "t5-small"
         logger.info("Loading raw model from: {path}", path=path)
         return TFT5ForConditionalGeneration.from_pretrained(path)
-    elif model == 'opt-125m-self-ask':
+    elif 'opt-125m' in model and strategy != 'baseline':
         peft_model_id = f"adam-wein/{model}"
         logger.info("Loading finetuned model from: {path}", path=peft_model_id)
         config = PeftConfig.from_pretrained(peft_model_id)
         return AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
             return_dict=True, load_in_8bit=True, device_map='auto', max_length=max_length)
-    elif model == 'opt-125m-direct':
-        peft_model_id = f"adam-wein/{model}"
-        logger.info("Loading finetuned model from: {path}", path=peft_model_id)
-        config = PeftConfig.from_pretrained(peft_model_id)
-        return AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
-            return_dict=True, load_in_8bit=True, device_map='auto', max_length=max_length)
-    elif model == 'opt-125m':
+    elif 'opt-125m' in model and strategy == 'baseline':
         base_model_name_or_path = f"facebook/{model}"
         logger.info("Loading raw model from: {path}", path=base_model_name_or_path)
         return AutoModelForCausalLM.from_pretrained(base_model_name_or_path, 
@@ -517,23 +492,20 @@ if __name__ == "__main__":
 
     model_options = [
         'flan-t5-small',
-        'flan-t5-small-self-ask',
-        'flan-t5-small-direct',
         't5-small',
-        't5-small-self-ask',
-        't5-small-direct',
-        'opt-125m-self-ask',
-        'opt-125m-direct',
-        'opt-125m'
+        'opt-125m', 
         ]
+    strategies = ['baseline', 'direct', 'self_ask', 'chain_of_thought']
     datapath = "data/MultihopEvaluation/"
     resultspath = "results/"
 
     # Stage 0: Setup
     parser = argparse.ArgumentParser(description='Run llm QA evaluation.')
     parser.add_argument('--model', help=f'Language model id, one of {model_options}', type=str)
-    # parser.add_argument('--examplars', help='Whether to include self-ask examplars in test prompt', type=bool)
+    parser.add_argument('--strategy', help=f'Available strategies are {strategies}', type=str)
     parser.add_argument('--examplars', help='Whether to include self-ask examplars in test prompt', action=argparse.BooleanOptionalAction)
+    parser.add_argument('--answer_first', help='Whether the answer is before the rationale', action=argparse.BooleanOptionalAction)
+    parser.add_argument('--random_facts', help='Whether the order of the facts is random', action=argparse.BooleanOptionalAction)
     parser.add_argument('--load_checkpoint', help='Whether to continue from saved progress', action=argparse.BooleanOptionalAction)
     parser.add_argument('--max_length', default=300, help='Max token length for tokenization', type=int)
     parser.add_argument('--size', help='Size of dataset to evaluate on, pass -1 for full dataset', type=int)
@@ -545,6 +517,9 @@ if __name__ == "__main__":
         raise ValueError(f"Model must be one of {model_options}")
 
     MODEL = args.model
+    STRATEGY = args.strategy
+    ANSWER_FIRST = args.answer_first
+    RANDOM_FACTS = args.random_facts
     MAX_LENGTH = args.max_length
     EXAMPLARS = args.examplars
     LOAD_CHECKPOINT = args.load_checkpoint
@@ -558,7 +533,7 @@ if __name__ == "__main__":
     BATCH_SIZE = args.batch_size
 
 
-    config = EvaluationConfig(model=MODEL, examplars=EXAMPLARS, data_path=datapath, results_path=resultspath, max_length=MAX_LENGTH)
+    config = EvaluationConfig(model=MODEL, strategy=STRATEGY, examplars=EXAMPLARS, answer_first=ANSWER_FIRST, random_facts=RANDOM_FACTS, data_path=datapath, results_path=resultspath, max_length=MAX_LENGTH)
     logger.info("Test set pointing to file: {path}", path=config.generate_test_set_file())
     logger.info("Responses will be saved to: {path}", path=config.generate_responses_file())
     logger.info("Results will be saved to: {path}", path=config.generate_results_file())
@@ -626,7 +601,8 @@ if __name__ == "__main__":
     
     results = {
         'model': config.model, 
-        "finetuning": config.finetuning_status_, 
+        'strategy': config.strategy,
+        # "finetuning": config.finetuning_status_, 
         'examplars': config.examplars, 
         'micro_results': micro_results, 
         'macro_results': macro_results}
