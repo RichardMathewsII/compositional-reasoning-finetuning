@@ -91,7 +91,7 @@ class EvaluationConfig(object):
         else:
             self.examplar_status_ = "without-examplars"
         
-        self.id = f"{self.strategy}-answer_first={self.answer_first}-random_facts={self.random_facts}-{self.examplar_status_}"
+        self.id = f"{self.model}-{self.strategy}-answer_first={self.answer_first}-random_facts={self.random_facts}-{self.examplar_status_}"
     
     def generate_test_set_file(self) -> str:
         # TODO discuss
@@ -99,7 +99,7 @@ class EvaluationConfig(object):
             # same dataset as self-ask with examplars
             return f"{self.data_path}self_ask-answer_first={self.answer_first}-random_facts={self.random_facts}-{self.examplar_status_}.json"
         else:
-            return f"{self.data_path}{self.id}.json"
+            return f"{self.data_path}{self.strategy}-answer_first={self.answer_first}-random_facts={self.random_facts}-{self.examplar_status_}.json"
     
     def generate_responses_file(self) -> str:
         return f"{self.results_path}{self.id}-responses.json"
@@ -164,7 +164,7 @@ def load_model(config: EvaluationConfig) -> Any:
     if 'flan-t5' in model and strategy != 'baseline':
         t5_model = TFT5ForConditionalGeneration.from_pretrained(f"google/{model}")
         keras_model = build_t5_training_wrapper_model(t5_model, max_length=max_length)
-        path = f"models/{model}-{id}.h5"
+        path = f"models/{id}.h5"
         logger.info("Loading finetuned model weights from: {path}", path=path)
         keras_model.load_weights(path)
         return t5_model
@@ -175,7 +175,7 @@ def load_model(config: EvaluationConfig) -> Any:
     if 't5' in model and strategy != 'baseline':
         t5_model = TFT5ForConditionalGeneration.from_pretrained(f"{model}")
         keras_model = build_t5_training_wrapper_model(t5_model, max_length=max_length)
-        path = f"models/{model}-{id}.h5"
+        path = f"models/{id}.h5"
         logger.info("Loading finetuned model weights from: {path}", path=path)
         keras_model.load_weights(path)
         return t5_model
