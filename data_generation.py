@@ -82,7 +82,7 @@ def generate_test_data(
             logger.info("Completed: generating self-ask prompt testing examples")
             # dump self-ask fine-tuning data to json
             logger.info("Initiating: exporting self-ask prompt testing examples to json")
-            examplar_setting = "wtih-examplar" if examplar_setting else "wtih-examplar"
+            examplar_setting = "with-examplars" if examplar_setting else "without-examplars"
             with open(path+f"self_ask-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}-{examplar_setting}.json", "w") as f:
                 json.dump(self_ask_test_set, f)
             logger.info("Completed: exporting self-ask prompt testing examples to json")
@@ -109,7 +109,7 @@ def generate_test_data(
             logger.info("Completed: generating chain-of-thought prompt testing examples")
             # dump chain-of-thought fine-tuning data to json
             logger.info("Initiating: exporting chain-of-thought prompt testing examples to json")
-            examplar_setting = "wtih-examplar" if examplar_setting else "wtih-examplar"
+            examplar_setting = "with-examplars" if examplar_setting else "without-examplars"
             with open(path+f"chain_of_thought-answer_first={answer_before_rationale}-random_facts={randomize_fact_order}-{examplar_setting}.json", "w") as f:
                 json.dump(chain_of_thought_test_set, f)
             logger.info("Completed: exporting chain-of-thought prompt testing examples to json")

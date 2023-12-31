@@ -155,7 +155,8 @@ class DataAdaptor:
             # structure training example
             structured_example = _structure_training_example(
                 example["prompt"], 
-                example["target"], 
+                example["target"],
+                example["answer"],
                 metadata=metadata
                     )
             structured_training_examples.append(structured_example)
@@ -496,7 +497,7 @@ def adapt_2WikiMultihopQA_to_self_ask_training_example(example: dict, answer_bef
     # remove white space at the beginning of each line
     prompt = "\n".join([line.strip() for line in prompt.split("\n")])
     target = "\n".join([line.strip() for line in target.split("\n")])
-    return {"prompt": prompt, "target": target, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences], "id": id}
+    return {"prompt": prompt, "target": target, "answer": answer, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences], "id": id}
 
 
 def adapt_2WikiMultihopQA_to_direct_training_example(example: dict, randomize_fact_order: bool = False) -> str:
@@ -534,7 +535,7 @@ def adapt_2WikiMultihopQA_to_direct_training_example(example: dict, randomize_fa
     # remove white space at the beginning of each line
     prompt = "\n".join([line.strip() for line in prompt.split("\n")])
     target = "\n".join([line.strip() for line in target.split("\n")])
-    return {"prompt": prompt, "target": target, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences], "id": id}
+    return {"prompt": prompt, "target": target, "answer": answer,"hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences], "id": id}
 
 
 def adapt_2WikiMultihopQA_to_squad_example(example: dict) -> str:
@@ -621,7 +622,7 @@ def adapt_2WikiMultihopQA_to_chain_of_thought_training_example(example: dict, an
     # remove white space at the beginning of each line
     prompt = "\n".join([line.strip() for line in prompt.split("\n")])
     target = "\n".join([line.strip() for line in target.split("\n")])
-    return {"prompt": prompt, "target": target, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences], "id": id}
+    return {"prompt": prompt, "target": target, "answer": answer, "hops": len(supporting_facts), "type": question_type, "relationships": [triple[1] for triple in evidences], "id": id}
 
 
 def adapt_CompositionalCelebrities_to_self_ask_examplar(example: dict) -> str:
@@ -940,7 +941,7 @@ def adapt_StrategyQA_to_squad_example(example: dict) -> str:
     return {"prompt": prompt, "target": target}
 
 
-def _structure_training_example(prompt: str, target: str, metadata: Dict) -> Dict[str, str]:
+def _structure_training_example(prompt: str, target: str, answer: str, metadata: Dict) -> Dict[str, str]:
     """Structures a text generation training example.
     
     Parameters
@@ -964,6 +965,7 @@ def _structure_training_example(prompt: str, target: str, metadata: Dict) -> Dic
         target_tokens = tokenizer.tokenize(target)
         return {"prompt": prompt, 
                 "target": target, 
+                "answer": answer,
                 "num_prompt_tokens": len(prompt_tokens), 
                 "num_target_tokens": len(target_tokens),
                 "num_tokens": len(prompt_tokens) + len(target_tokens),
@@ -971,7 +973,8 @@ def _structure_training_example(prompt: str, target: str, metadata: Dict) -> Dic
                 }
     except:
         return {"prompt": prompt, 
-                "target": target, 
+                "target": target,
+                "answer": answer, 
                 "num_prompt_tokens": None, 
                 "num_target_tokens": None,
                 "num_tokens": None,
