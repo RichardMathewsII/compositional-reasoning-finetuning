@@ -172,4 +172,4 @@ cython_debug/
 .DS_STORE
 .idea
 
-Icon
+data/*

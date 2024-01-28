@@ -1,10 +1,14 @@
-2023-12-21 12:31:22.580 | DEBUG    | __main__:<module>:543 - Examplars parameter -> False
-2023-12-21 12:31:22.580 | DEBUG    | __main__:<module>:544 - Checkpoint loader parameter -> False
-2023-12-21 12:31:22.580 | INFO     | __main__:_set_t5_tokenizer:124 - Loading tokenizer t5-small with max length of 300
-2023-12-21 12:31:22.865 | INFO     | __main__:<module>:550 - Test set pointing to file: data/MultihopEvaluation/chain_of_thought-answer_first=False-random_facts=True-without-examplars.json
-2023-12-21 12:31:22.866 | INFO     | __main__:<module>:551 - Responses will be saved to: results/t5-small-chain_of_thought-answer_first=False-random_facts=True-without-examplars-responses.json
-2023-12-21 12:31:22.866 | INFO     | __main__:<module>:552 - Results will be saved to: results/t5-small-chain_of_thought-answer_first=False-random_facts=True-without-examplars-results.json
-2023-12-21 12:31:22.914 | INFO     | __main__:<module>:564 - Loading t5-small model
-2023-12-21 12:31:28.619 | INFO     | __main__:load_model:179 - Loading finetuned model weights from: models/t5-small-chain_of_thought-answer_first=False-random_facts=True.h5
-2023-12-21 12:31:28.894 | INFO     | __main__:load_progress:474 - No existing progress detected... starting from scratch.
-2023-12-21 12:31:28.894 | INFO     | __main__:<module>:569 - Collecting model responses...
+2024-01-04 19:08:23.152 | DEBUG    | __main__:<module>:543 - Examplars parameter -> False
+2024-01-04 19:08:23.153 | DEBUG    | __main__:<module>:544 - Checkpoint loader parameter -> False
+2024-01-04 19:08:23.153 | INFO     | __main__:_set_t5_tokenizer:124 - Loading tokenizer t5-small with max length of 300
+2024-01-04 19:08:23.668 | INFO     | __main__:<module>:550 - Test set pointing to file: data/MultihopEvaluation/direct-answer_first=False-random_facts=False-without-examplars.json
+2024-01-04 19:08:23.668 | INFO     | __main__:<module>:551 - Responses will be saved to: results/t5-small-direct-answer_first=False-random_facts=False-without-examplars-responses.json
+2024-01-04 19:08:23.669 | INFO     | __main__:<module>:552 - Results will be saved to: results/t5-small-direct-answer_first=False-random_facts=False-without-examplars-results.json
+2024-01-04 19:08:24.756 | INFO     | __main__:<module>:564 - Loading t5-small model
+2024-01-04 19:08:35.263 | INFO     | __main__:load_model:179 - Loading finetuned model weights from: models/t5-small-direct-answer_first=False-random_facts=False.h5
+2024-01-04 19:08:40.453 | INFO     | __main__:load_progress:474 - No existing progress detected... starting from scratch.
+2024-01-04 19:08:40.454 | INFO     | __main__:<module>:569 - Collecting model responses...
+2024-01-04 19:13:30.833 | INFO     | __main__:<module>:599 - done
+2024-01-04 19:13:30.845 | INFO     | __main__:<module>:606 - Computing results...
+2024-01-04 19:13:32.305 | INFO     | __main__:<module>:613 - done
+2024-01-04 19:13:32.306 | INFO     | __main__:store_evaluation_results:450 - Storing evaluation results at results/t5-small-direct-answer_first=False-random_facts=False-without-examplars-results.json
