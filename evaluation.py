@@ -74,6 +74,7 @@ class EvaluationConfig(object):
     data_path: str
     results_path: str
     max_length: int = 300    
+    evaluation_data: str = None
     create_tokenizer: bool = True
     
     def __post_init__(self):
@@ -94,21 +95,32 @@ class EvaluationConfig(object):
         self.id = f"{self.model}-{self.strategy}-answer_first={self.answer_first}-random_facts={self.random_facts}-{self.examplar_status_}"
     
     def generate_test_set_file(self) -> str:
+        if self.evaluation_data:
+            return f"{self.data_path}{self.evaluation_data}.json"
         # TODO discuss
-        if self.strategy == "direct" and self.examplar_status_ == "with-examplars":
+        elif self.strategy == "direct" and self.examplar_status_ == "with-examplars":
             # same dataset as self-ask with examplars
             return f"{self.data_path}self_ask-answer_first={self.answer_first}-random_facts={self.random_facts}-{self.examplar_status_}.json"
         else:
             return f"{self.data_path}{self.strategy}-answer_first={self.answer_first}-random_facts={self.random_facts}-{self.examplar_status_}.json"
     
     def generate_responses_file(self) -> str:
-        return f"{self.results_path}{self.id}-responses.json"
-    
+        if self.evaluation_data:
+            return f"{self.results_path}{self.id}-responses-on-{self.evaluation_data}.json"
+        else:
+            return f"{self.results_path}{self.id}-responses.json"
+        
     def generate_results_file(self) -> str:
-        return f"{self.results_path}{self.id}-results.json"
+        if self.evaluation_data:
+            return f"{self.results_path}{self.id}-results-on-{self.evaluation_data}.json"
+        else:
+            return f"{self.results_path}{self.id}-results.json"
     
     def generate_processed_targets_file(self) -> str:
-        return f"{self.data_path}{self.id}-targets.json"
+        if self.evaluation_data:
+            return f"{self.results_path}{self.id}-targets-on-{self.evaluation_data}.json"
+        else:
+            return f"{self.results_path}{self.id}-targets.json"
 
     def _set_t5_tokenizer(self):
         if "flan-t5-small" in self.model:
@@ -523,6 +535,8 @@ if __name__ == "__main__":
     parser.add_argument('--max_length', default=300, help='Max token length for tokenization', type=int)
     parser.add_argument('--size', help='Size of dataset to evaluate on, pass -1 for full dataset', type=int)
     parser.add_argument('--batch_size', default=100, help='Batch size', type=int)
+    parser.add_argument('--evaluation_data', default=None, help='Dataset to use for evaluation if different than default', type=str)
+    
 
     args = parser.parse_args()
 
@@ -544,9 +558,9 @@ if __name__ == "__main__":
     logger.debug("Checkpoint loader parameter -> {checkpoint}", checkpoint=LOAD_CHECKPOINT)
     assert isinstance(EXAMPLARS, bool), "EXAMPLARS must be a boolean"
     BATCH_SIZE = args.batch_size
+    EVALUATION_DATA = args.evaluation_data
 
-
-    config = EvaluationConfig(model=MODEL, strategy=STRATEGY, examplars=EXAMPLARS, answer_first=ANSWER_FIRST, random_facts=RANDOM_FACTS, data_path=datapath, results_path=resultspath, max_length=MAX_LENGTH)
+    config = EvaluationConfig(model=MODEL, strategy=STRATEGY, examplars=EXAMPLARS, answer_first=ANSWER_FIRST, random_facts=RANDOM_FACTS, data_path=datapath, results_path=resultspath, max_length=MAX_LENGTH, evaluation_data=EVALUATION_DATA)
     logger.info("Test set pointing to file: {path}", path=config.generate_test_set_file())
     logger.info("Responses will be saved to: {path}", path=config.generate_responses_file())
     logger.info("Results will be saved to: {path}", path=config.generate_results_file())

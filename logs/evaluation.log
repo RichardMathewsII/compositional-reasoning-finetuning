@@ -1,8 +1,10 @@
-2024-01-28 19:39:38.570 | DEBUG    | __main__:<module>:543 - Examplars parameter -> False
-2024-01-28 19:39:38.572 | DEBUG    | __main__:<module>:544 - Checkpoint loader parameter -> False
-2024-01-28 19:39:38.572 | INFO     | __main__:_set_t5_tokenizer:124 - Loading tokenizer t5-small with max length of 300
-2024-01-28 19:39:39.544 | INFO     | __main__:<module>:550 - Test set pointing to file: data/MultihopEvaluation/direct-answer_first=False-random_facts=True-without-examplars.json
-2024-01-28 19:39:39.545 | INFO     | __main__:<module>:551 - Responses will be saved to: results/t5-small-direct-answer_first=False-random_facts=True-without-examplars-responses.json
-2024-01-28 19:39:39.546 | INFO     | __main__:<module>:552 - Results will be saved to: results/t5-small-direct-answer_first=False-random_facts=True-without-examplars-results.json
-2024-01-28 19:39:40.594 | INFO     | __main__:<module>:564 - Loading t5-small model
-2024-01-28 19:39:54.753 | INFO     | __main__:load_model:179 - Loading finetuned model weights from: models/t5-small-direct-answer_first=False-random_facts=True.h5
+2024-02-10 03:51:42.704 | DEBUG    | __main__:<module>:548 - Examplars parameter -> False
+2024-02-10 03:51:42.704 | DEBUG    | __main__:<module>:549 - Checkpoint loader parameter -> False
+2024-02-10 03:51:42.704 | INFO     | __main__:_set_t5_tokenizer:127 - Loading tokenizer t5-small with max length of 300
+2024-02-10 03:51:42.969 | INFO     | __main__:<module>:555 - Test set pointing to file: data/MultihopEvaluation/chain_of_thought-answer_first=False-random_facts=True-without-examplars.json
+2024-02-10 03:51:42.969 | INFO     | __main__:<module>:556 - Responses will be saved to: results/t5-small-chain_of_thought-answer_first=True-random_facts=False-without-examplars-responses.json
+2024-02-10 03:51:42.969 | INFO     | __main__:<module>:557 - Results will be saved to: results/t5-small-chain_of_thought-answer_first=True-random_facts=False-without-examplars-results.json
+2024-02-10 03:51:43.011 | INFO     | __main__:<module>:569 - Loading t5-small model
+2024-02-10 03:51:48.244 | INFO     | __main__:load_model:182 - Loading finetuned model weights from: models/t5-small-chain_of_thought-answer_first=True-random_facts=False.h5
+2024-02-10 03:51:48.468 | INFO     | __main__:load_progress:477 - No existing progress detected... starting from scratch.
+2024-02-10 03:51:48.469 | INFO     | __main__:<module>:574 - Collecting model responses...
