@@ -118,9 +118,9 @@ class EvaluationConfig(object):
     
     def generate_processed_targets_file(self) -> str:
         if self.evaluation_data:
-            return f"{self.results_path}{self.id}-targets-on-{self.evaluation_data}.json"
+            return f"{self.data_path}{self.id}-targets-on-{self.evaluation_data}.json"
         else:
-            return f"{self.results_path}{self.id}-targets.json"
+            return f"{self.data_path}{self.id}-targets.json"
 
     def _set_t5_tokenizer(self):
         if "flan-t5-small" in self.model:
