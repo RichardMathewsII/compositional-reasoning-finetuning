@@ -62,6 +62,7 @@ from rouge_score.rouge_scorer import RougeScorer
 from transformers import AutoModelForCausalLM, AutoTokenizer, TFT5ForConditionalGeneration, T5Tokenizer
 from loguru import logger
 from peft import PeftModel, PeftConfig
+import re
 
 @dataclass
 class EvaluationConfig(object):
@@ -274,32 +275,44 @@ def decode(tokens: Iterable, config: EvaluationConfig) -> Iterable[str]:
 # TODO update to account for the new question formats
 def extract_answer(generated_text: str) -> str:
     '''Extracts the answer from a generated text.'''
-    # extract last line
-    if '\n' not in generated_text:
-        # e.g. 'So the final answer is <answer>'
-        # e.g. '<answer>'
-        last_line =  generated_text
+    # extract answer in "...answer is <answer>. ..."
+    answer = re.search(r".*answer is (.*)\..*", generated_text)
+    if answer:
+        return answer.group(1)
     else:
-        pieces = generated_text.split('\n')
-        if pieces[-1] == '':
-            # e.g. 'So the final answer is <answer>\n' -> 'So the final answer is <answer>'
-            last_line = pieces[-2]
-        else:
-            # e.g. '...Intermediate answer: ...\nSo the final answer is <answer>'
-            # -> 'So the final answer is <answer>'
-            last_line = pieces[-1]
+        return ""
+    
 
-    # extract text after colon
-    if ':' not in last_line:
-        # e.g. '<answer>'
-        answer = last_line
-    else:
-        # e.g. 'So the final answer is <answer>' -> '<answer>'
-        answer = last_line.split(':')[-1]
+    # if answer_first:
+    #     # e.g. 'The answer is <answer>. '
+    #     answer = generated_text.split('.')[0]
 
-    # remove leading and trailing whitespace
-    answer = answer.strip()
-    return answer
+    # # extract last line
+    # if '\n' not in generated_text:
+    #     # e.g. 'So the final answer is <answer>'
+    #     # e.g. '<answer>'
+    #     last_line =  generated_text
+    # else:
+    #     pieces = generated_text.split('\n')
+    #     if pieces[-1] == '':
+    #         # e.g. 'So the final answer is <answer>\n' -> 'So the final answer is <answer>'
+    #         last_line = pieces[-2]
+    #     else:
+    #         # e.g. '...Intermediate answer: ...\nSo the final answer is <answer>'
+    #         # -> 'So the final answer is <answer>'
+    #         last_line = pieces[-1]
+
+    # # extract text after colon
+    # if ':' not in last_line:
+    #     # e.g. '<answer>'
+    #     answer = last_line
+    # else:
+    #     # e.g. 'So the final answer is <answer>' -> '<answer>'
+    #     answer = last_line.split(':')[-1]
+
+    # # remove leading and trailing whitespace
+    # answer = answer.strip()
+    # return answer
 
 
 def check_self_ask(generated_text: str) -> bool:
