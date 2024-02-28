@@ -1,14 +1,6 @@
-2024-02-10 16:42:15.706 | DEBUG    | __main__:<module>:557 - Examplars parameter -> False
-2024-02-10 16:42:15.706 | DEBUG    | __main__:<module>:558 - Checkpoint loader parameter -> False
-2024-02-10 16:42:15.707 | INFO     | __main__:_set_t5_tokenizer:136 - Loading tokenizer t5-small with max length of 300
-2024-02-10 16:42:16.372 | INFO     | __main__:<module>:564 - Test set pointing to file: data/MultihopEvaluation/chain_of_thought-answer_first=False-random_facts=True-with-examplars.json
-2024-02-10 16:42:16.372 | INFO     | __main__:<module>:565 - Responses will be saved to: results/t5-small-chain_of_thought-answer_first=True-random_facts=False-without-examplars-responses-on-chain_of_thought-answer_first=False-random_facts=True-with-examplars.json
-2024-02-10 16:42:16.372 | INFO     | __main__:<module>:566 - Results will be saved to: results/t5-small-chain_of_thought-answer_first=True-random_facts=False-without-examplars-results-on-chain_of_thought-answer_first=False-random_facts=True-with-examplars.json
-2024-02-10 16:42:16.425 | INFO     | __main__:<module>:578 - Loading t5-small model
-2024-02-10 16:42:21.668 | INFO     | __main__:load_model:191 - Loading finetuned model weights from: models/t5-small-chain_of_thought-answer_first=True-random_facts=False.h5
-2024-02-10 16:42:21.897 | INFO     | __main__:load_progress:486 - No existing progress detected... starting from scratch.
-2024-02-10 16:42:21.897 | INFO     | __main__:<module>:583 - Collecting model responses...
-2024-02-10 17:21:19.006 | INFO     | __main__:<module>:613 - done
-2024-02-10 17:21:19.016 | INFO     | __main__:<module>:620 - Computing results...
-2024-02-10 17:21:22.975 | INFO     | __main__:<module>:627 - done
-2024-02-10 17:21:22.975 | INFO     | __main__:store_evaluation_results:462 - Storing evaluation results at results/t5-small-chain_of_thought-answer_first=True-random_facts=False-without-examplars-results-on-chain_of_thought-answer_first=False-random_facts=True-with-examplars.json
+2024-02-27 16:42:16.685 | DEBUG    | __main__:<module>:570 - Examplars parameter -> True
+2024-02-27 16:42:16.685 | DEBUG    | __main__:<module>:571 - Checkpoint loader parameter -> False
+2024-02-27 16:42:16.685 | INFO     | __main__:_set_t5_tokenizer:137 - Loading tokenizer t5-small with max length of 300
+2024-02-27 16:42:16.853 | INFO     | __main__:<module>:577 - Test set pointing to file: data/MultihopEvaluation/chain_of_thought-answer_first=True-random_facts=True-with-examplars.json
+2024-02-27 16:42:16.853 | INFO     | __main__:<module>:578 - Responses will be saved to: results/t5-small-chain_of_thought-answer_first=True-random_facts=True-with-examplars-responses.json
+2024-02-27 16:42:16.853 | INFO     | __main__:<module>:579 - Results will be saved to: results/t5-small-chain_of_thought-answer_first=True-random_facts=True-with-examplars-results.json
