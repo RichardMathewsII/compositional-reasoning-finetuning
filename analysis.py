@@ -83,57 +83,31 @@ def load_responses(model: str = None, finetuning: str = None, examplars: bool = 
 
 
 def _load_macro_results() -> pd.DataFrame:
-
     path_to_json = './results'
 
-    json_files = [pos_json for pos_json in sorted(os.listdir(path_to_json)) if pos_json.endswith('results.json')]
+    json_files = [pos_json for pos_json in sorted(os.listdir(path_to_json)) if pos_json.endswith('.json')]
 
-    jsons_data = pd.DataFrame(columns=['Model', 'Finetune', 'With Examplars', "Answer First", "Random Facts", 'Accuracy', 'F1-1', 'F1-2', 'BLEU-1', 'BLEU-2', 'ROUGE-1', 'ROUGE-2', 'ROUGE-L'])
-
+    jsons_data = pd.DataFrame(columns=['Base Model', 'Finetune Strategy', 'Finetune Answer First', 'Finetune Random Facts', 'Eval With Examplars', 'Eval Answer First', 'Eval Random Facts', 'Accuracy', 'F1-1', 'F1-2', 'BLEU-1', 'BLEU-2', 'ROUGE-1', 'ROUGE-2', 'ROUGE-L'])
+    i = 0
     for index, js in enumerate(json_files):
         with open(os.path.join(path_to_json, js)) as json_file:
+            if "responses" in json_file.name:
+                continue
+            
             json_text = json.load(json_file)
             
+
             # Get rid of unnecessary filename and extension.
-            js = js.replace("-results.json", "")
-            
-            # Mark "With Examplars" column
-            if ("-with-examplars" in js):
-                model = js.replace("-with-examplars", "")
-                examplars = 'Y'
-            else:
-                model = js.replace("-without-examplars", "")
-                examplars = 'N'
-            
-            # Mark "Answer First" column
-            if ("-answer_first=True" in model):
-                model = model.replace("-answer_first=True", "")
-                answer_first = "Y"
-            else:
-                model = model.replace("-answer_first=False", "")
-                answer_first = "N"
-            
-            # Mark "Random Facts" column
-            if ("-random_facts=True" in model):
-                model = model.replace("-random_facts=True", "")
-                random_facts = "Y"
-            else:
-                model = model.replace("-random_facts=False", "")
-                random_facts = "N"
-                
-            # Mark "Finetune" column
-            if ("-direct" in model):
-                model = model.replace("-direct", "")
-                fine_tune = "Direct"
-            elif ("-self_ask" in model):
-                model = model.replace("-self_ask", "")
-                fine_tune = "Self Ask"
-            elif ("-chain_of_thought" in model):
-                model = model.replace("-chain_of_thought", "")
-                fine_tune = "Chain of Thought"
-            else:
-                fine_tune = "N/A"
-            
+            # js = js.replace("-results.json", "")
+            js = js.split('-')
+            base_model = '-'.join(js[:2])
+            finetune_strategy = js[2]
+            finetune_answer_first = js[3].split('=')[1]
+            finetune_random_facts = js[4].split('=')[1]
+            eval_with_examplars = (js[12] == 'with') if 'on' in js else (js[5] == 'with')
+            eval_answer_first = js[10].split('=')[1] if 'on' in js else finetune_answer_first 
+            eval_random_facts = js[11].split('=')[1] if 'on' in js else finetune_random_facts
+
             # Build data frame row
             accuracy = json_text['macro_results']['accuracy']
             f1_1 = json_text['macro_results']['F1-1']
@@ -143,11 +117,15 @@ def _load_macro_results() -> pd.DataFrame:
             rouge_1 = json_text['macro_results']['rouge-1']
             rouge_2 = json_text['macro_results']['rouge-2']
             rouge_L = json_text['macro_results']['rouge-L']
-            
+
             # Add row to data frame
-            jsons_data.loc[index] = [model, fine_tune, examplars, answer_first, random_facts, accuracy, f1_1, f1_2, bleu_1, bleu_2, rouge_1, rouge_2, rouge_L]
+            # jsons_data.loc[index] = [model, fine_tune, examplars, accuracy, f1_1, f1_2, bleu_1, bleu_2, rouge_1, rouge_2, rouge_L]
+            
+            jsons_data.loc[i] = [base_model, finetune_strategy, finetune_answer_first, finetune_random_facts, eval_with_examplars, eval_answer_first, eval_random_facts, accuracy, f1_1, f1_2, bleu_1, bleu_2, rouge_1, rouge_2, rouge_L]
+            i += 1
+
+    # print result
     return jsons_data
-        
 
 
 def plot_context_size_distributions(df: pd.DataFrame, title: str = "", save: bool=False):

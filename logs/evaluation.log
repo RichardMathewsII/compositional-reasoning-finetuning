@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 2024-03-01 18:39:14.220 | DEBUG    | __main__:<module>:570 - Examplars parameter -> False
 2024-03-01 18:39:14.221 | DEBUG    | __main__:<module>:571 - Checkpoint loader parameter -> False
 2024-03-01 18:39:14.221 | INFO     | __main__:_set_t5_tokenizer:137 - Loading tokenizer t5-small with max length of 300
@@ -5,3 +6,11 @@
 2024-03-01 18:39:15.866 | INFO     | __main__:<module>:578 - Responses will be saved to: results/t5-small-self_ask-answer_first=False-random_facts=False-without-examplars-responses.json
 2024-03-01 18:39:15.866 | INFO     | __main__:<module>:579 - Results will be saved to: results/t5-small-self_ask-answer_first=False-random_facts=False-without-examplars-results.json
 2024-03-01 18:39:18.121 | INFO     | __main__:<module>:591 - Loading t5-small model
+=======
+2024-02-27 16:42:16.685 | DEBUG    | __main__:<module>:570 - Examplars parameter -> True
+2024-02-27 16:42:16.685 | DEBUG    | __main__:<module>:571 - Checkpoint loader parameter -> False
+2024-02-27 16:42:16.685 | INFO     | __main__:_set_t5_tokenizer:137 - Loading tokenizer t5-small with max length of 300
+2024-02-27 16:42:16.853 | INFO     | __main__:<module>:577 - Test set pointing to file: data/MultihopEvaluation/chain_of_thought-answer_first=True-random_facts=True-with-examplars.json
+2024-02-27 16:42:16.853 | INFO     | __main__:<module>:578 - Responses will be saved to: results/t5-small-chain_of_thought-answer_first=True-random_facts=True-with-examplars-responses.json
+2024-02-27 16:42:16.853 | INFO     | __main__:<module>:579 - Results will be saved to: results/t5-small-chain_of_thought-answer_first=True-random_facts=True-with-examplars-results.json
+>>>>>>> 0aaf92c6d3c441349977c94baba2164358e046cc
