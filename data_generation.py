@@ -226,18 +226,22 @@ if __name__ == "__main__":
             if randomize_fact_order and answer_before_rationale:
                 continue
 
-            generate_finetuning_data(
-                direct=True, 
-                self_ask=True, 
-                chain_of_thought=True, 
-                n_examplars=2,
-                sample_size=-1,
-                dev_size=12576,
-                answer_before_rationale=answer_before_rationale,
-                randomize_fact_order=randomize_fact_order
-                )
+            # generate_finetuning_data(
+            #     direct=False, 
+            #     self_ask=True, 
+            #     chain_of_thought=False, 
+            #     n_examplars=2,
+            #     sample_size=-1,
+            #     dev_size=12576,
+            #     answer_before_rationale=answer_before_rationale,
+            #     randomize_fact_order=randomize_fact_order
+            #     )
 
             generate_test_data(
+                direct = True,
+                self_ask = True,
+                chain_of_thought = False,
+                n_examplars = 2,
                 sample_size=-1,
                 answer_before_rationale=answer_before_rationale,
                 randomize_fact_order=randomize_fact_order

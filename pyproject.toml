@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "compositional-reasoning"
+version = "0.1.0"
+description = ""
+authors = ["RichardMathewsII <richardmathews.ai@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.12"
+transformers = "^4.38.2"
+sentencepiece = "^0.2.0"
+tokenizers = "^0.15.2"
+nltk = "^3.8.1"
+loguru = "^0.7.2"
+rouge-score = "^0.1.2"
+peft = "^0.9.0"
+tensorflow = "2.12.1"
+ipython = "^8.22.1"
+ipykernel = "^6.29.3"
+pandas = "^2.2.1"
+spacy = "^3.7.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
